@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+
+body {
+    font-family: "Helvetica";
+}
+
+    .bar {
+        fill: steelblue;
+    }
+    div.tooltip {
+        position: absolute;
+        text-align: center;
+        width: 120px;
+        heidht: 35px;
+        padding: 2px;
+        font: 12px sans-serif;
+        background: lightblue;
+        border: 0;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+
+</style>
+<body>
+<h1> Sun hours in Innsbruck since 1906</h1>
+<!-- load the d3.js library -->
+<script src="//d3js.org/d3.v4.min.js"></script>
+<script>
+    var margin = {top: 20, right: 20, bottom: 30, left: 40},
+        width = 1200 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+    var svg = d3.select('body')
+      .append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .append('g')
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+    var div = d3.select('body')
+      .append('div')
+      .attr('class', 'tooltip')
+      .attr('opacity', 0);
+
+    d3.csv('sun1906.csv', function(error, data) {
+      if (error) throw error;
+
+      data.forEach(function(d) {
+        d.Jahr = +d.Jahr;
+      });
+
+      console.log("data", data);
+
+      var x = d3.scaleBand()
+        .range([0, width])
+        .padding(0, 1);
+
+      var y = d3.scaleLinear()
+        .range([height, 0]);
+
+      x.domain(data.map(function(d) {
+        return d.YEAR;
+      }));
+
+      y.domain([
+        d3.min(data, function(d) {
+          return d.Jahr;
+        }) * 0.95,
+        d3.max(data, function (d) {
+          return d.Jahr;
+        })
+      ]);
+
+      svg.selectAll('.bar')
+        .data(data)
+        .enter()
+        .append('rect')
+        .attr('class', 'bar')
+        .attr('x', function(d, i) {
+          return x(d.YEAR);
+        })
+        .attr('y', function(d) {
+          return y(d.Jahr);
+        })
+        .attr('width', x.bandwidth())
+        .attr('height', function(d) {
+          return height - y(d.Jahr);
+        })
+        .on('mouseover', function(d) {
+          div.transition()
+            .duration(200)
+            .style('opacity', .9);
+
+          div.html('in the year ' + d.YEAR + '<br/>' + d.Jahr + ' hours of sun')
+            .style('left', (d3.event.pageX) + 'px')
+            .style('top', (d3.event.pageY - 28) + 'px')
+        })
+        .on('mouseout', function(d) {
+          div.transition.duration(500)
+            .style('opacity', 0);
+        });
+
+      svg.append('g')
+        .attr('transform', 'translate(0, ' + height + ')')
+        .call(d3.axisBottom(x)
+          .tickValues(x.domain().filter(function(d, i) {
+            return !(i%5)
+          }))
+        );
+
+      svg.append('g')
+        .call(d3.axisLeft(y));
+    });
+
+
+</script>
+</body>
