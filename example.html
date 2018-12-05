@@ -3,72 +3,87 @@
 <style> /* set the CSS */
 
 body {
-    font-family: "Helvetica";
+    font-family: "Helvetica", sans-serif;
 }
 
-    .bar {
-        fill: steelblue;
-    }
-    div.tooltip {
-        position: absolute;
-        text-align: center;
-        width: 120px;
-        heidht: 35px;
-        padding: 2px;
-        font: 12px sans-serif;
-        background: lightblue;
-        border: 0;
-        border-radius: 8px;
-        pointer-events: none;
-    }
+.bar {
+    fill: steelblue;
+}
+
+div.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 120px;
+    height: 35px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: lightblue;
+    border: 0;
+    border-radius: 8px;
+    pointer-events: none;
+}
 
 </style>
 <body>
 <h1> Sun hours in Innsbruck since 1906</h1>
 <!-- load the d3.js library -->
-<script src="//d3js.org/d3.v4.min.js"></script>
+<script src="d3.js"></script>
 <script>
-    /*
-     * reading data: http://learnjsdata.com/read_data.html
-     * nesting data: http://learnjsdata.com/group_data.html
-     * Grouped bar chart tutorial: https://bl.ocks.org/mbostock/3887051
-     */
-    var margin = {top: 20, right: 20, bottom: 30, left: 40},
-        width = 1200 - margin.left - margin.right,
-        height = 500 - margin.top - margin.bottom;
+  /*
+   * reading data: http://learnjsdata.com/read_data.html
+   * nesting data: http://learnjsdata.com/group_data.html
+   * Grouped bar chart tutorial: https://bl.ocks.org/mbostock/3887051
+   */
+  var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 1200 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
 
-    var svg = d3.select('body')
-      .append('svg')
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
-      .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+  var svg = d3.select('body')
+    .append('svg')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-    var div = d3.select('body')
-      .append('div')
-      .attr('class', 'tooltip')
-      .attr('opacity', 0);
+  var div = d3.select('body')
+    .append('div')
+    .attr('class', 'tooltip')
+    .attr('opacity', 0);
 
-    d3.csv('data/wfpvam_foodprices.csv',
-      function(data) {
-        return {
-          country: data.adm0_name,
-          commodity: data.cm_name,
-          year: +data.mp_year,
-          month: +data.mp_month,
-          price: +data.mp_price
-        }
-      },
-      function(error, rawData) {
+  /*
+   * Read all data from the CSV file;
+   * rename every attribute to have easy memorable names; also convert them to the right type;
+   * nest data to make the data set better approachable
+   */
+  d3.csv('data/wfpvam_foodprices.csv',
+    function (data) {
+      return {
+        country: data.adm0_name,
+        province: data.adm1_name,
+        city: data.mkt_name,
+        commodity: data.cm_name,
+        currency: data.cur_name,
+        market_type: data.pt_name,
+        unit: data.um_name,
+        year: +data.mp_year,
+        month: +data.mp_month,
+        price: +data.mp_price
+      }
+    },
+    function (error, rawData) {
       if (error) throw error;
 
       var tdata = d3.nest()
-        .key(function(d) { return d.country })
-        .key(function(d) { return d.commodity })
-        .rollup(function(v) {
+        .key(function (d) {
+          return d.country
+        })
+        .key(function (d) {
+          return d.commodity
+        })
+        /*.rollup(function (v) {
           return d3.mean(v, function (d) {
-              return d.price
-            })
+            return d.price
+          })
 
         })
         /*.key(function(d) {
@@ -76,7 +91,7 @@ body {
             return d.price
           }
         })*/
-        .object(rawData);
+        .entries(rawData);
 
 
       console.log(tdata);
