@@ -25,7 +25,7 @@ div.tooltip {
 
 </style>
 <body>
-<h1> Sun hours in Innsbruck since 1906</h1>
+<h1>Global Food Prices</h1>
 <!-- load the d3.js library -->
 <script src="d3.js"></script>
 <script>
@@ -38,6 +38,8 @@ div.tooltip {
     width = 1200 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
+  var yearMenu = d3.select('#yearsDropdown');
+
   var svg = d3.select('body')
     .append('svg')
     .attr('width', width + margin.left + margin.right)
@@ -49,6 +51,19 @@ div.tooltip {
     .append('div')
     .attr('class', 'tooltip')
     .attr('opacity', 0);
+
+  var x0 = d3.scaleBand()
+    .rangeRound([0, width])
+    .paddingInner(0.1);
+
+  var x1 = d3.scaleBand()
+    .padding(0.05);
+
+  var y = d3.scaleLinear()
+    .rangeRound([height, 0]);
+
+  var z = d3.scaleOrdinal()
+    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
   /*
    * Read all data from the CSV file;
@@ -70,15 +85,30 @@ div.tooltip {
         price: +data.mp_price
       }
     },
-    function (error, rawData) {
+    function (error, data) {
       if (error) throw error;
 
-      var tdata = d3.nest()
+      var nestedData = d3.nest()
         .key(function (d) {
-          return d.country
+          return d.year;
         })
         .key(function (d) {
-          return d.commodity
+          return d.country;
+        })
+        .key(function (d) {
+          return d.commodity;
+        })
+        .rollup(function(v) {
+          return {
+            country: v[0].country,
+            commodity: v[0].commodity,
+            currency: v[0].currency,
+            market_type: v[0].market_type,
+            unit: v[0].unit,
+            year: v[0].year,
+            count: v.length,
+            total: d3.mean(v, function(d) { return d.price; })
+          }
         })
         /*.rollup(function (v) {
           return d3.mean(v, function (d) {
@@ -91,10 +121,38 @@ div.tooltip {
             return d.price
           }
         })*/
-        .entries(rawData);
+        .entries(data);
 
+      yearMenu
+        .append('select')
+        .selectAll('option')
+        .data(nestedData)
+        .enter()
+        .append('option')
+        .attr('value', function(d) {
+          return d.key;
+        })
+        .text(function(d) {
+          return d.key;
+        });
 
-      console.log(tdata);
+      console.log(nestedData);
+
+      //function onlyUnique(value, index, self) {
+      //  return self.indexOf(value.country) === index;
+      //}
+
+      //var countries = data.filter(onlyUnique);
+      //var keys = data.columns.slice(1);
+      //console.log('keys:');
+      //console.log(countries);
+      x0.domain(data.map(function(d) { return d.country; }));
+      //x1.domain(keys).rangeRound([0, x0.bandwidth()]);
+      y.domain([0, d3.max(data, function(d) { return d.price})]);
+
+      svg.append('g')
+        .selectAll('g')
+        
       // data.forEach(function(d) {
       //   d.Jahr = +d.Jahr;
       // });
@@ -164,4 +222,5 @@ div.tooltip {
 
 
 </script>
+  <div id="yearsDropdown"></div>
 </body>
