@@ -36,12 +36,13 @@ div.tooltip {
    * http://bl.ocks.org/kpq/6695897
    * http://bl.ocks.org/hubgit/raw/9133448/
    * https://bl.ocks.org/ProQuestionAsker/8382f70af7f4a7355827c6dc4ee8817d
+   * https://amber.rbind.io/blog/2017/05/02/d3nest/
    */
   var margin = {top: 20, right: 20, bottom: 30, left: 40},
     width = 1200 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-  var yearMenu = d3.select('#yearsDropdown');
+  var yearMenu = d3.select('#yearDropdown');
 
   var svg = d3.select('body')
     .append('svg')
@@ -95,12 +96,15 @@ div.tooltip {
         .key(function (d) {
           return d.year;
         })
+        .sortKeys(d3.descending)
         .key(function (d) {
           return d.country;
         })
+        .sortKeys(d3.ascending)
         .key(function (d) {
           return d.commodity;
         })
+        .sortKeys(d3.ascending)
         .rollup(function(v) {
           return {
             country: v[0].country,
@@ -149,6 +153,7 @@ div.tooltip {
       //var keys = data.columns.slice(1);
       //console.log('keys:');
       //console.log(countries);
+      var dataFromYear = nestedData['2017'];
       x0.domain(data.map(function(d) { return d.country; }));
       //x1.domain(keys).rangeRound([0, x0.bandwidth()]);
       y.domain([0, d3.max(data, function(d) { return d.price})]);
@@ -225,5 +230,5 @@ div.tooltip {
 
 
 </script>
-  <div id="yearsDropdown"></div>
+<div id="yearDropdown"></div>
 </body>
