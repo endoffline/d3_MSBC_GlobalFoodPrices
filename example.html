@@ -40,26 +40,32 @@ div.tooltip {
    * https://bl.ocks.org/ProQuestionAsker/8382f70af7f4a7355827c6dc4ee8817d
    * https://amber.rbind.io/blog/2017/05/02/d3nest/
    */
-  var svg = d3.select("svg"),
+
+  let svg = d3.select("svg"),
     margin = {top: 20, right: 20, bottom: 30, left: 40},
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-  var yearMenu = d3.select('#yearDropdown');
+  let yearMenu = d3.select('#yearDropdown');
 
-  var x0 = d3.scaleBand()
+  let x0 = d3.scaleBand()
     .rangeRound([0, width])
     .paddingInner(0.1);
 
-  var x1 = d3.scaleBand()
+  let x1 = d3.scaleBand()
     .padding(0.05);
 
-  var y = d3.scaleLinear()
+  let y = d3.scaleLinear()
     .rangeRound([height, 0]);
 
-  var z = d3.scaleOrdinal()
+  let z = d3.scaleOrdinal()
     .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+
+
+  let selectedYear = '2012';
+  let selectedCountries = ['Afghanistan', 'Central African Republic', 'Congo', 'Ethiopia', 'Ghana'];
+  let selectedShortCommodities = ['Wheat flour', 'Rice', 'Milk'];
 
   /*
    * Read all data from the CSV file;
@@ -73,8 +79,9 @@ div.tooltip {
         province: data.adm1_name,
         city: data.mkt_name,
         commodity: data.cm_name,
+        shortCommodity: data.cm_name.split(/[.:;?!\-~,`"&|()<>{}\[\]\r\n/\\]+/)[0].trim(),
         currency: data.cur_name,
-        market_type: data.pt_name,
+        marketType: data.pt_name,
         unit: data.um_name,
         year: +data.mp_year,
         month: +data.mp_month,
@@ -84,149 +91,81 @@ div.tooltip {
     function (error, data) {
       if (error) throw error;
 
-      var nestedData = d3.nest()
-        .key(function (d) {
-          return d.year;
-        })
+      let nestedData = d3.nest()
+        .key((d) => d.year + '.' + d.country + '.' + d.shortCommodity)
         .sortKeys(d3.descending)
-        .key(function (d) {
-          return d.country;
-        })
-        .sortKeys(d3.ascending)
-        .key(function (d) {
-          return d.commodity;
-        })
-        .sortKeys(d3.ascending)
-        .rollup(function(v) {
+        .rollup(function (v) {
           return {
             country: v[0].country,
             commodity: v[0].commodity,
+            shortCommodity: v[0].shortCommodity,
             currency: v[0].currency,
-            market_type: v[0].market_type,
+            marketType: v[0].marketType,
             unit: v[0].unit,
             year: v[0].year,
             count: v.length,
             mean: d3.mean(v, function (d) {
               return d.price;
-            })
+            }),
+            meanDollar: 0.0 // TODO convert currency to USD
           }
         })
-        /*.rollup(function (v) {
-          return d3.mean(v, function (d) {
-            return d.price
-          })
-
-        })
-        /*.key(function(d) {
-          if (d.year == 2000) {
-            return d.price
-          }
-        })*/
         .entries(data);
+
+      console.log(nestedData);
+
+      let flatData = nestedData.map((d) => d.value);
+      console.log(flatData);
+
+      let filteredData = flatData.filter(
+        (d) => +d.year === +selectedYear && selectedCountries.indexOf(d.country) > -1 && selectedShortCommodities.indexOf(d.shortCommodity) > -1
+      );
+      console.log(filteredData);
+
+      let maxPrice = d3.max(
+        filteredData,
+        (d) => d.mean
+      );
+      console.log('maxPrice: ' + maxPrice);
+
+      let yearsSet = [...(new Set(flatData.map(({year}) => year)))];
 
       yearMenu
         .append('select')
         .selectAll('option')
-        .data(nestedData)
+        .data(yearsSet)
         .enter()
         .append('option')
-        .attr('value', function(d) {
-          return d.key;
-        })
-        .text(function(d) {
-          return d.key;
-        });
+        .attr('value', d => d)
+        .text(d => d);
 
-      console.log(nestedData);
+      let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();
+      console.log(countriesSet);
 
-      function onlyUnique(value, index, self) {
-        return self.indexOf(value.country) === index;
-      }
+      let shortCommoditiesSet = [...(new Set(flatData.map(({shortCommodity}) => shortCommodity)))].sort();
+      console.log(shortCommoditiesSet);
 
-      //var countries = data.filter(onlyUnique);
-      var year = '2017';
-      var commodities = ['Wheat flour - Retail', 'Rice (white) - Retail', 'Milk - Retail'];
-      var countries = ['Afghanistan', 'Congo', 'Ethiopia', 'Ghana'];
-      //console.log('keys:');
-      //console.log(countries);
-      var dataFromYear = nestedData.filter(function (d) {
-        return +d.key === +year
-      })[0].values;
-      console.log(dataFromYear);
-      x0.domain(dataFromYear.filter(function (d) {
-        return countries.indexOf(d.key) > -1
-      }).map(function (d) {
-        return d.key;
-      }));
-      x1.domain(commodities).rangeRound([0, x0.bandwidth()]);
-
-      var maxPrice = d3.max(
-        dataFromYear,
-        function (d1) {
-          //console.log(d1);
-          return d3.max(
-            d1.values.filter(
-              function (d2) {
-                //console.log(d2);
-                return commodities.indexOf(d2.key) > -1;
-              }).map(
-              function (d3) {
-                return d3.value.mean;
-              })
-          )
-        });
+      console.log(filteredData.map((d) => d.country));
+      x0.domain(selectedCountries);
+      x1.domain(selectedShortCommodities).rangeRound([0, x0.bandwidth()]);
 
       y.domain([0, maxPrice]);
-      console.log(nestedData.map(function (d) {
-        return d.key
-      }));
-      console.log(nestedData[0].values.map(function (d) {
-        return d.key;
-      }));
 
       g.append("g")
         .selectAll("g")
-        .data(dataFromYear)
-        .filter(function (d) {
-          return countries.indexOf(d.key) > -1
-        })
+        .data(filteredData)
         .enter().append("g")
-        .attr("transform", function (d) {
-          return "translate(" + x0(d.key) + ",0)";
-        })
+        .attr("transform", (d) => "translate(" + x0(d.country) + ",0)")
         .selectAll("rect")
-        .data(function (d) {
-          return commodities.map(
-            function (key) {
-              return {
-                key: key,
-                value: d.values.filter(
-                  function (d) {
-                    if (keys.indexOf(d.key) > -1) {
-                      console.log(d.value)
-                    }
-                    return commodities.indexOf(d.key) > -1
-                  })
-              }
-            })
-        })
-        //.filter(function(d) { return })
+        .data((d) => selectedShortCommodities.map((key) => {
+          return {key: key, value: (key === d.shortCommodity) ? d.mean : ''}
+        }))
         .enter().append("rect")
-        .attr("x", function (d) {
-          console.log(x1(d.key));
-          return x1(d.key);
-        })
-        .attr("y", function (d) {
-          console.log(y(d.value));
-          return y(d.value);
-        })
+        .attr("x", (d) => x1(d.key))
+        .attr("y", (d) => y(d.value))
         .attr("width", x1.bandwidth())
-        .attr("height", function (d) {
-          return height - y(d.value);
-        })
-        .attr("fill", function (d) {
-          return z(d.key);
-        });
+        .attr("height", (d) => height - y(d.value))
+        .attr("fill", (d) => z(d.key));
 
       g.append("g")
         .attr("class", "axis")
@@ -245,16 +184,14 @@ div.tooltip {
         .attr("text-anchor", "start")
         .text("Population");
 
-      var legend = g.append("g")
+      let legend = g.append("g")
         .attr("font-family", "sans-serif")
         .attr("font-size", 10)
         .attr("text-anchor", "end")
         .selectAll("g")
-        .data(commodities.slice().reverse())
+        .data(selectedShortCommodities.slice().reverse())
         .enter().append("g")
-        .attr("transform", function (d, i) {
-          return "translate(0," + i * 20 + ")";
-        });
+        .attr("transform", (d, i) => "translate(0," + i * 20 + ")");
 
       legend.append("rect")
         .attr("x", width - 19)
@@ -266,9 +203,7 @@ div.tooltip {
         .attr("x", width - 24)
         .attr("y", 9.5)
         .attr("dy", "0.32em")
-        .text(function (d) {
-          return d;
-        });
+        .text((d) => d);
       // data.forEach(function(d) {
       //   d.Jahr = +d.Jahr;
       // });
