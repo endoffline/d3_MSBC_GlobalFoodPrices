@@ -10,7 +10,10 @@
 <h1>Global Food Prices</h1>
 
 <div id="yearDropdown"></div>
+<div id="countriesList"></div>
+<div id="commoditiesList"></div>
 <svg width="960" height="500"></svg>
+
 <script>
   /*
    * reading data: http://learnjsdata.com/read_data.html
@@ -29,6 +32,8 @@
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   let yearMenu = d3.select('#yearDropdown');
+  let countriesList = d3.select('#countriesList');
+  let shortCommoditiesList = d3.select('#commoditiesList');
 
   let x0 = d3.scaleBand()
     .rangeRound([0, width])
@@ -44,7 +49,7 @@
     .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
 
-  let selectedYear = '2012';
+  let selectedYear = '2015';
   let selectedCountries = ['Afghanistan', 'Central African Republic', 'Congo', 'Ethiopia', 'Ghana'];
   let selectedShortCommodities = ['Wheat flour', 'Rice', 'Milk'];
 
@@ -98,19 +103,7 @@
       let flatData = nestedData.map((d) => d.value);
       console.log(flatData);
 
-      let filteredData = flatData.filter(
-        (d) => +d.year === +selectedYear && selectedCountries.indexOf(d.country) > -1 && selectedShortCommodities.indexOf(d.shortCommodity) > -1
-      );
-      console.log(filteredData);
-
-      let maxPrice = d3.max(
-        filteredData,
-        (d) => d.mean
-      );
-      console.log('maxPrice: ' + maxPrice);
-
       let yearsSet = [...(new Set(flatData.map(({year}) => year)))];
-
       yearMenu
         .append('select')
         .selectAll('option')
@@ -120,19 +113,221 @@
         .attr('value', d => d)
         .text(d => d);
 
+      yearMenu
+        .selectAll('option')
+        .filter((year) => +selectedYear === +year)
+        .attr('selected', true);
+
       let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();
-      console.log(countriesSet);
+      countriesList
+        .selectAll('input')
+        .data(countriesSet)
+        .enter()
+        .append('label')
+        .attr('for', (country) => country)
+        .text((country) => country)
+        .append('input')
+        .attr('type', 'checkbox')
+        .attr('class', 'checkboxCountry')
+        .attr('name', (country) => country)
+        .attr('value', (country) => country)
+      ;
+
+      countriesList
+        .selectAll('input')
+        .filter((country) => selectedCountries.indexOf(country) > -1)
+        .attr('checked', true);
 
       let shortCommoditiesSet = [...(new Set(flatData.map(({shortCommodity}) => shortCommodity)))].sort();
-      console.log(shortCommoditiesSet);
+      shortCommoditiesList
+        .selectAll('input')
+        .data(shortCommoditiesSet)
+        .enter()
+        .append('label')
+        .attr('for', (commodity) => commodity)
+        .text((commodity) => commodity)
+        .append('input')
+        .attr('type', 'checkbox')
+        .attr('class', 'checkboxCommodity')
+        .attr('name', (commodity) => commodity)
+        .attr('value', (commodity) => commodity);
 
-      console.log(filteredData.map((d) => d.country));
-      x0.domain(selectedCountries);
-      x1.domain(selectedShortCommodities).rangeRound([0, x0.bandwidth()]);
+      shortCommoditiesList
+        .selectAll('input')
+        .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
+        .attr('checked', true);
 
-      y.domain([0, maxPrice]);
 
-      g.append("g")
+      // Function to create the initial graph
+      let initialGraph = function(year, countries, shortCommodities){
+
+        let selectedData = flatData.filter(
+          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
+        );
+
+        console.log(selectedData);
+
+        x0.domain(countries);
+        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
+
+        let maxPrice = d3.max(
+          selectedData,
+          (d) => d.mean
+        );
+        y.domain([0, maxPrice]);
+        console.log('maxPrice: ' + maxPrice);
+
+        let prices = g.selectAll(".price")
+          .data(selectedData)
+          .enter().append("g")
+          .attr("class", "price")
+          .attr("transform", (d) => "translate(" + x0(d.country) + ",0)");
+
+        let bars = prices
+          .selectAll(".rect")
+          .data((d) => shortCommodities.map((key) => {
+            return {key: key, value: (key === d.shortCommodity) ? d.mean : 0}
+          }))
+          .enter().append("rect");
+
+        bars
+          .attr("x", (d) => x1(d.key))
+          .attr("y", (d) => y(d.value))
+          .attr("width", x1.bandwidth())
+          .attr("height", (d) => height - y(d.value))
+          .attr("fill", (d) => z(d.key));
+
+
+        g.append("g")
+          .attr("class", "x-axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(x0));
+
+        g.append("g")
+          .attr("class", "y-axis")
+          .call(d3.axisLeft(y).ticks(null, "s"))
+          .append("text")
+          .attr("x", 2)
+          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("dy", "0.32em")
+          .attr("fill", "#000")
+          .attr("font-weight", "bold")
+          .attr("text-anchor", "start")
+          .text("Price");
+
+        let legend = g.append("g")
+          .attr("font-family", "sans-serif")
+          .attr("font-size", 10)
+          .attr("text-anchor", "end")
+          .selectAll(".legend")
+          .data(shortCommodities.slice().reverse())
+          .enter().append("g")
+          .attr("transform", (d, i) => "translate(0," + i * 20 + ")")
+          .attr("class", "legend");
+
+        legend.append("rect")
+          .attr("x", width - 19)
+          .attr("width", 19)
+          .attr("height", 19)
+          .attr("fill", z);
+
+        legend.append("text")
+          .attr("x", width - 24)
+          .attr("y", 9.5)
+          .attr("dy", "0.32em")
+          .text((d) => d);
+
+      };
+
+      initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+
+      // Update the data
+      let updateGraph = function(year, countries, shortCommodities){
+
+        console.log(countries);
+        let selectedData = flatData.filter(
+          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
+        );
+
+        x0.domain(countries);
+        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
+
+        let maxPrice = d3.max(
+          selectedData,
+          (d) => d.mean
+        );
+        y.domain([0, (maxPrice || 100)]);
+        console.log('maxPrice: ' + (maxPrice || 100));
+
+        console.log(selectedData);
+
+
+        let prices = g.selectAll(".price")
+          .data(selectedData);
+
+        // TODO set bars to 0 when there isn't any data available
+        prices.selectAll("rect")
+          .data((d) => shortCommodities.map((key) => {
+            return {key: key, value: (key === d.shortCommodity) ? d.mean : 0}
+          }))
+          .transition()
+          .duration(1000)
+          .attr("x", (d) => x1(d.key))
+          .attr("y", (d) => y(d.value))
+          .attr("width", x1.bandwidth())
+          .attr("height", (d) => height - y(d.value))
+          .attr("fill", (d) => z(d.key));
+
+
+        g.select(".x-axis")
+          .transition()
+          .duration(1000)
+          .call(d3.axisBottom(x0));
+
+        g.select(".y-axis")
+          .transition()
+          .duration(1000)
+          .call(d3.axisLeft(y).ticks(null, "s"));
+
+      };
+
+      // Run update function when dropdown selection changes
+      yearMenu.on('change', function(){
+
+        // Find which fruit was selected from the dropdown
+        let selectedYear = d3.select(this)
+          .select("select")
+          .property("value");
+
+        g.selectAll('*').remove();
+        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      });
+
+      countriesList.on('change', function() {
+
+        selectedCountries = [];
+
+        let sCountries = d3.selectAll("input.checkboxCountry:checked");
+        sCountries.each((country) => selectedCountries.push(country));
+        console.log(selectedCountries);
+        g.selectAll('*').remove();
+        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      });
+
+      shortCommoditiesList.on('change', function() {
+
+        selectedShortCommodities = [];
+
+        let sCommodities = d3.selectAll("input.checkboxCommodity:checked");
+        sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
+        console.log('comm');
+        console.log(selectedShortCommodities);
+        g.selectAll('*').remove();
+        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      });
+
+
+      /*g.append("g")
         .selectAll("g")
         .data(filteredData)
         .enter().append("g")
@@ -146,45 +341,9 @@
         .attr("y", (d) => y(d.value))
         .attr("width", x1.bandwidth())
         .attr("height", (d) => height - y(d.value))
-        .attr("fill", (d) => z(d.key));
+        .attr("fill", (d) => z(d.key));*/
 
-      g.append("g")
-        .attr("class", "axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x0));
 
-      g.append("g")
-        .attr("class", "axis")
-        .call(d3.axisLeft(y).ticks(null, "s"))
-        .append("text")
-        .attr("x", 2)
-        .attr("y", y(y.ticks().pop()) + 0.5)
-        .attr("dy", "0.32em")
-        .attr("fill", "#000")
-        .attr("font-weight", "bold")
-        .attr("text-anchor", "start")
-        .text("Population");
-
-      let legend = g.append("g")
-        .attr("font-family", "sans-serif")
-        .attr("font-size", 10)
-        .attr("text-anchor", "end")
-        .selectAll("g")
-        .data(selectedShortCommodities.slice().reverse())
-        .enter().append("g")
-        .attr("transform", (d, i) => "translate(0," + i * 20 + ")");
-
-      legend.append("rect")
-        .attr("x", width - 19)
-        .attr("width", 19)
-        .attr("height", 19)
-        .attr("fill", z);
-
-      legend.append("text")
-        .attr("x", width - 24)
-        .attr("y", 9.5)
-        .attr("dy", "0.32em")
-        .text((d) => d);
       // data.forEach(function(d) {
       //   d.Jahr = +d.Jahr;
       // });
