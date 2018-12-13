@@ -1,33 +1,14 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<style> /* set the CSS */
 
-body {
-    font-family: "Helvetica", sans-serif;
-}
-
-.bar {
-    fill: steelblue;
-}
-
-div.tooltip {
-    position: absolute;
-    text-align: center;
-    width: 120px;
-    height: 35px;
-    padding: 2px;
-    font: 12px sans-serif;
-    background: lightblue;
-    border: 0;
-    border-radius: 8px;
-    pointer-events: none;
-}
-
-</style>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="css/multisetbarchart.css" media="screen" />
+  <!-- load the d3.js library -->
+  <script src="js/d3.js"></script>
+</head>
 <body>
 <h1>Global Food Prices</h1>
-<!-- load the d3.js library -->
-<script src="d3.js"></script>
+
 <div id="yearDropdown"></div>
 <svg width="960" height="500"></svg>
 <script>
