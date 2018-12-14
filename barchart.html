@@ -50,7 +50,7 @@
 
 
   let selectedYear = '2015';
-  let selectedCountries = ['Afghanistan', 'Central African Republic', 'Congo', 'Ethiopia', 'Ghana'];
+  let selectedCountries = ['Afghanistan', 'Armenia', 'Democratic Republic of the Congo', 'Ethiopia', 'South Sudan'];
   let selectedShortCommodities = ['Wheat flour', 'Rice', 'Milk'];
 
   /*
@@ -119,9 +119,13 @@
         .attr('selected', true);
 
       let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();
+      let countriesWithExchangeRateSet = flatData.filter(
+        (df) => +df.year === 2017 && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
+      ).map((d) => d.country);
+
       countriesList
         .selectAll('input')
-        .data(countriesSet)
+        .data(countriesWithExchangeRateSet)
         .enter()
         .append('label')
         .attr('for', (country) => country)
@@ -172,7 +176,13 @@
 
         let maxPrice = d3.max(
           selectedData,
-          (d) => d.mean
+          (d) => {
+            let exchangeRate = flatData.filter(
+              (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
+            ).map((d) => d.mean);
+            console.log(exchangeRate);
+            return d.mean / exchangeRate;
+          }
         );
         y.domain([0, maxPrice]);
         console.log('maxPrice: ' + maxPrice);
@@ -186,7 +196,11 @@
         let bars = prices
           .selectAll(".rect")
           .data((d) => shortCommodities.map((key) => {
-            return {key: key, value: (key === d.shortCommodity) ? d.mean : 0}
+            let exchangeRate = flatData.filter(
+              (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
+            ).map((d) => d.mean);
+
+            return {key: key, value: (key === d.shortCommodity) ? d.mean / exchangeRate : 0}
           }))
           .enter().append("rect");
 
@@ -295,7 +309,7 @@
       yearMenu.on('change', function(){
 
         // Find which fruit was selected from the dropdown
-        let selectedYear = d3.select(this)
+        selectedYear = d3.select(this)
           .select("select")
           .property("value");
 
