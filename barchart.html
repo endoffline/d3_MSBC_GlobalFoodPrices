@@ -60,7 +60,305 @@
    * rename every attribute to have easy memorable names; also convert them to the right type;
    * nest data to make the data set better approachable
    */
-  d3.csv('data/wfpvam_foodprices.csv',
+  d3.queue()
+    .defer(
+      d3.csv,
+      'data/wfpvam_foodprices.csv',
+      function (data) {
+        return {
+          country: data.adm0_name,
+          province: data.adm1_name,
+          city: data.mkt_name,
+          commodity: data.cm_name,
+          shortCommodity: data.cm_name.split(/[.:;?!\-~,`"&|()<>{}\[\]\r\n/\\]+/)[0].trim(),
+          currency: data.cur_name,
+          marketType: data.pt_name,
+          unit: data.um_name,
+          year: +data.mp_year,
+          month: +data.mp_month,
+          price: +data.mp_price
+        }
+      }
+    )
+    .defer(
+      d3.csv,
+      'data/wb_exchange_rates.csv'
+    )
+    .await(function(error, fpData, erData) {
+      if (error) throw error;
+
+      erData.forEach(function (d) {
+        d.country = d['Country Name'];
+        d.countryCode = d['Country Code'];
+        d.indicator = d['Indicator Name'];
+        d.indicatorCode = d['Indicator Code'];
+      });
+
+      console.log(erData.filter((d) => d.country === 'Ethiopia')[0]['2016']);
+      let nestedData = d3.nest()
+        .key((d) => d.year + '.' + d.country + '.' + d.shortCommodity)
+        .sortKeys(d3.descending)
+        .rollup(function (v) {
+          return {
+            country: v[0].country,
+            commodity: v[0].commodity,
+            shortCommodity: v[0].shortCommodity,
+            currency: v[0].currency,
+            marketType: v[0].marketType,
+            unit: v[0].unit,
+            year: v[0].year,
+            count: v.length,
+            mean: d3.mean(v,(d) => d.price),
+            exchangeRate: (erData.filter((d) => d.country === v[0].country).length > 0) ? erData.filter((d) => d.country === v[0].country)[0][v[0].year] : null,
+            meanDollar: d3.mean(v,(d) => d.price)
+          }
+        })
+        .entries(fpData);
+
+      console.log(nestedData);
+
+      let flatData = nestedData.map((d) => d.value);
+      console.log(flatData);
+
+      let yearsSet = [...(new Set(flatData.map(({year}) => year)))];
+      yearMenu
+        .append('select')
+        .selectAll('option')
+        .data(yearsSet)
+        .enter()
+        .append('option')
+        .attr('value', d => d)
+        .text(d => d);
+
+      yearMenu
+        .selectAll('option')
+        .filter((year) => +selectedYear === +year)
+        .attr('selected', true);
+
+      let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();
+      //let countriesWithExchangeRateSet = flatData.filter(
+      //  (df) => +df.year === 2017 && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
+      //).map((d) => d.country);
+
+      countriesList
+        .selectAll('input')
+        .data(countriesSet)
+        .enter()
+        .append('label')
+        .attr('for', (country) => country)
+        .text((country) => country)
+        .append('input')
+        .attr('type', 'checkbox')
+        .attr('class', 'checkboxCountry')
+        .attr('name', (country) => country)
+        .attr('value', (country) => country)
+      ;
+
+      countriesList
+        .selectAll('input')
+        .filter((country) => selectedCountries.indexOf(country) > -1)
+        .attr('checked', true);
+
+      let shortCommoditiesSet = [...(new Set(flatData.map(({shortCommodity}) => shortCommodity)))].sort();
+      shortCommoditiesList
+        .selectAll('input')
+        .data(shortCommoditiesSet)
+        .enter()
+        .append('label')
+        .attr('for', (commodity) => commodity)
+        .text((commodity) => commodity)
+        .append('input')
+        .attr('type', 'checkbox')
+        .attr('class', 'checkboxCommodity')
+        .attr('name', (commodity) => commodity)
+        .attr('value', (commodity) => commodity);
+
+      shortCommoditiesList
+        .selectAll('input')
+        .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
+        .attr('checked', true);
+
+
+      // Function to create the initial graph
+      let initialGraph = function(year, countries, shortCommodities){
+
+        let selectedData = flatData.filter(
+          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
+        );
+
+        console.log(selectedData);
+
+        x0.domain(countries);
+        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
+
+        let maxPrice = d3.max(
+          selectedData,
+          (d) => {
+            //let exchangeRate = flatData.filter(
+            //  (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
+            //).map((d) => d.mean);
+            //console.log(exchangeRate);
+            return (d.exchangeRate !== null) ? d.mean / d.exchangeRate : 0;
+          }
+        );
+        y.domain([0, maxPrice]);
+        console.log('maxPrice: ' + maxPrice);
+
+        let prices = g.selectAll(".price")
+          .data(selectedData)
+          .enter().append("g")
+          .attr("class", "price")
+          .attr("transform", (d) => "translate(" + x0(d.country) + ",0)");
+
+        let bars = prices
+          .selectAll(".rect")
+          .data((d) => shortCommodities.map((key) => {
+            //let exchangeRate = flatData.filter(
+            //  (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
+            //).map((d) => d.mean);
+
+            return {key: key, value: (key === d.shortCommodity && d.exchangeRate !== null) ? d.mean / d.exchangeRate : 0 }
+          }))
+          .enter().append("rect");
+
+        bars
+          .attr("x", (d) => x1(d.key))
+          .attr("y", (d) => y(d.value))
+          .attr("width", x1.bandwidth())
+          .attr("height", (d) => height - y(d.value))
+          .attr("fill", (d) => z(d.key));
+
+
+        g.append("g")
+          .attr("class", "x-axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(x0));
+
+        g.append("g")
+          .attr("class", "y-axis")
+          .call(d3.axisLeft(y).ticks(null, "s"))
+          .append("text")
+          .attr("x", 2)
+          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("dy", "0.32em")
+          .attr("fill", "#000")
+          .attr("font-weight", "bold")
+          .attr("text-anchor", "start")
+          .text("Price");
+
+        let legend = g.append("g")
+          .attr("font-family", "sans-serif")
+          .attr("font-size", 10)
+          .attr("text-anchor", "end")
+          .selectAll(".legend")
+          .data(shortCommodities.slice().reverse())
+          .enter().append("g")
+          .attr("transform", (d, i) => "translate(0," + i * 20 + ")")
+          .attr("class", "legend");
+
+        legend.append("rect")
+          .attr("x", width - 19)
+          .attr("width", 19)
+          .attr("height", 19)
+          .attr("fill", z);
+
+        legend.append("text")
+          .attr("x", width - 24)
+          .attr("y", 9.5)
+          .attr("dy", "0.32em")
+          .text((d) => d);
+
+      };
+
+      initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+
+      // Update the data
+      let updateGraph = function(year, countries, shortCommodities){
+
+        console.log(countries);
+        let selectedData = flatData.filter(
+          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
+        );
+
+        x0.domain(countries);
+        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
+
+        let maxPrice = d3.max(
+          selectedData,
+          (d) => d.mean
+        );
+        y.domain([0, (maxPrice || 100)]);
+        console.log('maxPrice: ' + (maxPrice || 100));
+
+        console.log(selectedData);
+
+
+        let prices = g.selectAll(".price")
+          .data(selectedData);
+
+        // TODO set bars to 0 when there isn't any data available
+        prices.selectAll("rect")
+          .data((d) => shortCommodities.map((key) => {
+            return {key: key, value: (key === d.shortCommodity) ? d.mean : 0}
+          }))
+          .transition()
+          .duration(1000)
+          .attr("x", (d) => x1(d.key))
+          .attr("y", (d) => y(d.value))
+          .attr("width", x1.bandwidth())
+          .attr("height", (d) => height - y(d.value))
+          .attr("fill", (d) => z(d.key));
+
+
+        g.select(".x-axis")
+          .transition()
+          .duration(1000)
+          .call(d3.axisBottom(x0));
+
+        g.select(".y-axis")
+          .transition()
+          .duration(1000)
+          .call(d3.axisLeft(y).ticks(null, "s"));
+
+      };
+
+      // Run update function when dropdown selection changes
+      yearMenu.on('change', function(){
+
+        // Find which fruit was selected from the dropdown
+        selectedYear = d3.select(this)
+          .select("select")
+          .property("value");
+
+        g.selectAll('*').remove();
+        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      });
+
+      countriesList.on('change', function() {
+
+        selectedCountries = [];
+
+        let sCountries = d3.selectAll("input.checkboxCountry:checked");
+        sCountries.each((country) => selectedCountries.push(country));
+        console.log(selectedCountries);
+        g.selectAll('*').remove();
+        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      });
+
+      shortCommoditiesList.on('change', function() {
+
+        selectedShortCommodities = [];
+
+        let sCommodities = d3.selectAll("input.checkboxCommodity:checked");
+        sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
+        console.log('comm');
+        console.log(selectedShortCommodities);
+        g.selectAll('*').remove();
+        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      });
+    });
+
+  /*d3.csv('data/wfpvam_foodprices.csv',
     function (data) {
       return {
         country: data.adm0_name,
@@ -425,7 +723,7 @@
       //
       // svg.append('g')
       //   .call(d3.axisLeft(y));
-    });
+    //});
 
 
 </script>
