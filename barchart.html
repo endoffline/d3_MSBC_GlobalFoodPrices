@@ -33,6 +33,11 @@
     height = +svg.attr("height") - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+  let div = d3.select('body')
+    .append('div')
+    .attr('class', 'tooltip')
+    .attr('opacity', 0);
+
   let yearMenu = d3.select('#yearDropdown');
   let countriesList = d3.select('#countriesList');
   let shortCommoditiesList = d3.select('#commoditiesList');
@@ -53,7 +58,7 @@
 
   let selectedYear = '2015';
   let selectedCountries = ['Afghanistan', 'Armenia', 'Democratic Republic of the Congo', 'Ethiopia', 'South Sudan'];
-  let selectedShortCommodities = ['Wheat flour', 'Rice', 'Milk'];
+  let selectedShortCommodities = ['Wheat flour', 'Rice', 'Milk', 'Sesame'];
 
   /*
    * Read all data from the CSV file;
@@ -99,18 +104,57 @@
         .key((d) => d.year + '.' + d.country + '.' + d.shortCommodity)
         .sortKeys(d3.descending)
         .rollup(function (v) {
+
+          let mean = d3.mean(v, (d) => {
+            let u = d.unit.split(' ');
+            let unit;
+            let price = d.price;
+            if (u.length === 2 && Number.isInteger(+u[0])) {
+              let factor = +u[0];
+              unit = u[1];
+              price = price / factor;
+            } else {
+              unit = u[0];
+            }
+
+            if (['mt'].indexOf(unit.toLowerCase()) > -1) {
+              price = price * 0.001;
+            } else if (['ml', 'g'].indexOf(unit.toLowerCase()) > -1) {
+              price = price * 1000;
+            } else if (['pounds', 'pound'].indexOf(unit.toLowerCase()) > -1) {
+              price = price * 2.2046;
+            }
+            // dozen, cubic meter, gallon, marmite
+            return price;
+          });
+
+          let unitParts = v[0].unit.split(' ');
+          let unit = '';
+          if (unitParts.length > 1) {
+            for (let i = 1; i < unitParts.length; i++) {
+              unit += unitParts[i];
+              if (i === unitParts.length - 1)
+                unit += ' ';
+            }
+          } else {
+            unit = unitParts[0];
+          }
+
+          let rate = erData.filter((d) => d.country === v[0].country).map((d) => d[v[0].year]);
           return {
             country: v[0].country,
             commodity: v[0].commodity,
             shortCommodity: v[0].shortCommodity,
             currency: v[0].currency,
             marketType: v[0].marketType,
-            unit: v[0].unit,
+            unitOriginal: v[0].unit,
+            unit: unit,
             year: v[0].year,
             count: v.length,
-            mean: d3.mean(v,(d) => d.price),
-            exchangeRate: (erData.filter((d) => d.country === v[0].country).length > 0) ? erData.filter((d) => d.country === v[0].country)[0][v[0].year] : null,
-            meanDollar: d3.mean(v,(d) => d.price)
+            meanOriginal: d3.mean(v, (d) => d.price).toFixed(2),
+            mean: mean.toFixed(2),
+            exchangeRate: (rate.length && rate[0] && Number.isInteger(+rate[0])) ? (+rate[0]).toFixed(2) : null,
+            meanDollar: (rate.length && rate[0]) ? (mean / +rate[0]).toFixed(2) : 0
           }
         })
         .entries(fpData);
@@ -119,6 +163,9 @@
 
       let flatData = nestedData.map((d) => d.value);
       console.log(flatData);
+
+      let unitsSet = [...(new Set(flatData.map(({unit}) => unit)))].sort();
+      console.log(unitsSet);
 
       let yearsSet = [...(new Set(flatData.map(({year}) => year)))];
       yearMenu
@@ -136,9 +183,6 @@
         .attr('selected', true);
 
       let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();
-      //let countriesWithExchangeRateSet = flatData.filter(
-      //  (df) => +df.year === 2017 && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
-      //).map((d) => d.country);
 
       countriesList
         .selectAll('input')
@@ -151,8 +195,7 @@
         .attr('type', 'checkbox')
         .attr('class', 'checkboxCountry')
         .attr('name', (country) => country)
-        .attr('value', (country) => country)
-      ;
+        .attr('value', (country) => country);
 
       countriesList
         .selectAll('input')
@@ -178,7 +221,6 @@
         .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
         .attr('checked', true);
 
-
       // Function to create the initial graph
       let initialGraph = function(year, countries, shortCommodities){
 
@@ -191,16 +233,7 @@
         x0.domain(countries);
         x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
 
-        let maxPrice = d3.max(
-          selectedData,
-          (d) => {
-            //let exchangeRate = flatData.filter(
-            //  (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
-            //).map((d) => d.mean);
-            //console.log(exchangeRate);
-            return (d.exchangeRate !== null) ? d.mean / d.exchangeRate : 0;
-          }
-        );
+        let maxPrice = d3.max(selectedData, (d) => d.meanDollar);
         y.domain([0, maxPrice]);
         console.log('maxPrice: ' + maxPrice);
 
@@ -213,11 +246,14 @@
         let bars = prices
           .selectAll(".rect")
           .data((d) => shortCommodities.map((key) => {
-            //let exchangeRate = flatData.filter(
-            //  (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
-            //).map((d) => d.mean);
-
-            return {key: key, value: (key === d.shortCommodity && d.exchangeRate !== null) ? d.mean / d.exchangeRate : 0 }
+            return {
+              key: key,
+              value: (key === d.shortCommodity) ? d.meanDollar : 0,
+              unit: d.unit,
+              currency: d.currency,
+              meanOriginal: d.meanOriginal,
+              unitOriginal: d.unitOriginal
+            }
           }))
           .enter().append("rect");
 
@@ -226,8 +262,21 @@
           .attr("y", (d) => y(d.value))
           .attr("width", x1.bandwidth())
           .attr("height", (d) => height - y(d.value))
-          .attr("fill", (d) => z(d.key));
+          .attr("fill", (d) => z(d.key))
+          .on('mouseover', function (d) {
+            div.transition()
+              .duration(200)
+              .style('opacity', .9);
 
+            div.html('mean: $' + d.value + ', unit: ' + d.unit + ', mean: ' + d.currency + ' ' + d.meanOriginal + ', original unit: ' + d.unitOriginal)
+              .style('left', (d3.event.pageX) + 'px')
+              .style('top', (d3.event.pageY - 28) + 'px')
+          })
+          .on('mouseout', function (d) {
+            div.transition()
+              .duration(500)
+              .style('opacity', 0);
+          });
 
         g.append("g")
           .attr("class", "x-axis")
@@ -267,7 +316,6 @@
           .attr("y", 9.5)
           .attr("dy", "0.32em")
           .text((d) => d);
-
       };
 
       initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
@@ -358,306 +406,6 @@
       });
     });
 
-  /*d3.csv('data/wfpvam_foodprices.csv',
-    function (data) {
-      return {
-        country: data.adm0_name,
-        province: data.adm1_name,
-        city: data.mkt_name,
-        commodity: data.cm_name,
-        shortCommodity: data.cm_name.split(/[.:;?!\-~,`"&|()<>{}\[\]\r\n/\\]+/)[0].trim(),
-        currency: data.cur_name,
-        marketType: data.pt_name,
-        unit: data.um_name,
-        year: +data.mp_year,
-        month: +data.mp_month,
-        price: +data.mp_price
-      }
-    },
-    function (error, data) {
-      if (error) throw error;
-
-      let nestedData = d3.nest()
-        .key((d) => d.year + '.' + d.country + '.' + d.shortCommodity)
-        .sortKeys(d3.descending)
-        .rollup(function (v) {
-          return {
-            country: v[0].country,
-            commodity: v[0].commodity,
-            shortCommodity: v[0].shortCommodity,
-            currency: v[0].currency,
-            marketType: v[0].marketType,
-            unit: v[0].unit,
-            year: v[0].year,
-            count: v.length,
-            mean: d3.mean(v, function (d) {
-              return d.price;
-            }),
-            meanDollar: 0.0 // TODO convert currency to USD
-          }
-        })
-        .entries(data);
-
-      console.log(nestedData);
-
-      let flatData = nestedData.map((d) => d.value);
-      console.log(flatData);
-
-      let yearsSet = [...(new Set(flatData.map(({year}) => year)))];
-      yearMenu
-        .append('select')
-        .selectAll('option')
-        .data(yearsSet)
-        .enter()
-        .append('option')
-        .attr('value', d => d)
-        .text(d => d);
-
-      yearMenu
-        .selectAll('option')
-        .filter((year) => +selectedYear === +year)
-        .attr('selected', true);
-
-      let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();
-      let countriesWithExchangeRateSet = flatData.filter(
-        (df) => +df.year === 2017 && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
-      ).map((d) => d.country);
-
-      countriesList
-        .selectAll('input')
-        .data(countriesWithExchangeRateSet)
-        .enter()
-        .append('label')
-        .attr('for', (country) => country)
-        .text((country) => country)
-        .append('input')
-        .attr('type', 'checkbox')
-        .attr('class', 'checkboxCountry')
-        .attr('name', (country) => country)
-        .attr('value', (country) => country)
-      ;
-
-      countriesList
-        .selectAll('input')
-        .filter((country) => selectedCountries.indexOf(country) > -1)
-        .attr('checked', true);
-
-      let shortCommoditiesSet = [...(new Set(flatData.map(({shortCommodity}) => shortCommodity)))].sort();
-      shortCommoditiesList
-        .selectAll('input')
-        .data(shortCommoditiesSet)
-        .enter()
-        .append('label')
-        .attr('for', (commodity) => commodity)
-        .text((commodity) => commodity)
-        .append('input')
-        .attr('type', 'checkbox')
-        .attr('class', 'checkboxCommodity')
-        .attr('name', (commodity) => commodity)
-        .attr('value', (commodity) => commodity);
-
-      shortCommoditiesList
-        .selectAll('input')
-        .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
-        .attr('checked', true);
-
-
-      // Function to create the initial graph
-      let initialGraph = function(year, countries, shortCommodities){
-
-        let selectedData = flatData.filter(
-          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
-        );
-
-        console.log(selectedData);
-
-        x0.domain(countries);
-        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
-
-        let maxPrice = d3.max(
-          selectedData,
-          (d) => {
-            let exchangeRate = flatData.filter(
-              (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
-            ).map((d) => d.mean);
-            console.log(exchangeRate);
-            return d.mean / exchangeRate;
-          }
-        );
-        y.domain([0, maxPrice]);
-        console.log('maxPrice: ' + maxPrice);
-
-        let prices = g.selectAll(".price")
-          .data(selectedData)
-          .enter().append("g")
-          .attr("class", "price")
-          .attr("transform", (d) => "translate(" + x0(d.country) + ",0)");
-
-        let bars = prices
-          .selectAll(".rect")
-          .data((d) => shortCommodities.map((key) => {
-            let exchangeRate = flatData.filter(
-              (df) => +df.year === +d.year && df.country === d.country && df.shortCommodity.toLowerCase() === 'Exchange rate'.toLowerCase()
-            ).map((d) => d.mean);
-
-            return {key: key, value: (key === d.shortCommodity) ? d.mean / exchangeRate : 0}
-          }))
-          .enter().append("rect");
-
-        bars
-          .attr("x", (d) => x1(d.key))
-          .attr("y", (d) => y(d.value))
-          .attr("width", x1.bandwidth())
-          .attr("height", (d) => height - y(d.value))
-          .attr("fill", (d) => z(d.key));
-
-
-        g.append("g")
-          .attr("class", "x-axis")
-          .attr("transform", "translate(0," + height + ")")
-          .call(d3.axisBottom(x0));
-
-        g.append("g")
-          .attr("class", "y-axis")
-          .call(d3.axisLeft(y).ticks(null, "s"))
-          .append("text")
-          .attr("x", 2)
-          .attr("y", y(y.ticks().pop()) + 0.5)
-          .attr("dy", "0.32em")
-          .attr("fill", "#000")
-          .attr("font-weight", "bold")
-          .attr("text-anchor", "start")
-          .text("Price");
-
-        let legend = g.append("g")
-          .attr("font-family", "sans-serif")
-          .attr("font-size", 10)
-          .attr("text-anchor", "end")
-          .selectAll(".legend")
-          .data(shortCommodities.slice().reverse())
-          .enter().append("g")
-          .attr("transform", (d, i) => "translate(0," + i * 20 + ")")
-          .attr("class", "legend");
-
-        legend.append("rect")
-          .attr("x", width - 19)
-          .attr("width", 19)
-          .attr("height", 19)
-          .attr("fill", z);
-
-        legend.append("text")
-          .attr("x", width - 24)
-          .attr("y", 9.5)
-          .attr("dy", "0.32em")
-          .text((d) => d);
-
-      };
-
-      initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
-
-      // Update the data
-      let updateGraph = function(year, countries, shortCommodities){
-
-        console.log(countries);
-        let selectedData = flatData.filter(
-          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
-        );
-
-        x0.domain(countries);
-        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
-
-        let maxPrice = d3.max(
-          selectedData,
-          (d) => d.mean
-        );
-        y.domain([0, (maxPrice || 100)]);
-        console.log('maxPrice: ' + (maxPrice || 100));
-
-        console.log(selectedData);
-
-
-        let prices = g.selectAll(".price")
-          .data(selectedData);
-
-        // TODO set bars to 0 when there isn't any data available
-        prices.selectAll("rect")
-          .data((d) => shortCommodities.map((key) => {
-            return {key: key, value: (key === d.shortCommodity) ? d.mean : 0}
-          }))
-          .transition()
-          .duration(1000)
-          .attr("x", (d) => x1(d.key))
-          .attr("y", (d) => y(d.value))
-          .attr("width", x1.bandwidth())
-          .attr("height", (d) => height - y(d.value))
-          .attr("fill", (d) => z(d.key));
-
-
-        g.select(".x-axis")
-          .transition()
-          .duration(1000)
-          .call(d3.axisBottom(x0));
-
-        g.select(".y-axis")
-          .transition()
-          .duration(1000)
-          .call(d3.axisLeft(y).ticks(null, "s"));
-
-      };
-
-      // Run update function when dropdown selection changes
-      yearMenu.on('change', function(){
-
-        // Find which fruit was selected from the dropdown
-        selectedYear = d3.select(this)
-          .select("select")
-          .property("value");
-
-        g.selectAll('*').remove();
-        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
-      });
-
-      countriesList.on('change', function() {
-
-        selectedCountries = [];
-
-        let sCountries = d3.selectAll("input.checkboxCountry:checked");
-        sCountries.each((country) => selectedCountries.push(country));
-        console.log(selectedCountries);
-        g.selectAll('*').remove();
-        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
-      });
-
-      shortCommoditiesList.on('change', function() {
-
-        selectedShortCommodities = [];
-
-        let sCommodities = d3.selectAll("input.checkboxCommodity:checked");
-        sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
-        console.log('comm');
-        console.log(selectedShortCommodities);
-        g.selectAll('*').remove();
-        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
-      });
-
-
-      /*g.append("g")
-        .selectAll("g")
-        .data(filteredData)
-        .enter().append("g")
-        .attr("transform", (d) => "translate(" + x0(d.country) + ",0)")
-        .selectAll("rect")
-        .data((d) => selectedShortCommodities.map((key) => {
-          return {key: key, value: (key === d.shortCommodity) ? d.mean : ''}
-        }))
-        .enter().append("rect")
-        .attr("x", (d) => x1(d.key))
-        .attr("y", (d) => y(d.value))
-        .attr("width", x1.bandwidth())
-        .attr("height", (d) => height - y(d.value))
-        .attr("fill", (d) => z(d.key));*/
-
-
       // data.forEach(function(d) {
       //   d.Jahr = +d.Jahr;
       // });
@@ -724,7 +472,5 @@
       // svg.append('g')
       //   .call(d3.axisLeft(y));
     //});
-
-
 </script>
 </body>
