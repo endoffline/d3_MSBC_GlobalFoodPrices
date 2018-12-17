@@ -140,7 +140,8 @@
             unit = unitParts[0];
           }
 
-          let rate = erData.filter((d) => d.country === v[0].country).map((d) => d[v[0].year]);
+          let rates = erData.filter((d) => d.country === v[0].country).map((d) => d[v[0].year]);
+          let rate = (rates.length && rates[0] && parseFloat(rates[0])) ? (parseFloat(rates[0])) : null;
           return {
             country: v[0].country,
             commodity: v[0].commodity,
@@ -151,10 +152,10 @@
             unit: unit,
             year: v[0].year,
             count: v.length,
-            meanOriginal: d3.mean(v, (d) => d.price).toFixed(2),
-            mean: mean.toFixed(2),
-            exchangeRate: (rate.length && rate[0] && Number.isInteger(+rate[0])) ? (+rate[0]).toFixed(2) : null,
-            meanDollar: (rate.length && rate[0]) ? (mean / +rate[0]).toFixed(2) : 0
+            meanOriginal: +d3.mean(v, (d) => d.price).toFixed(2),
+            mean: +mean.toFixed(2),
+            exchangeRate: (rate) ? +rate.toFixed(2) : null,
+            meanDollar: (rate) ? +(mean / rate).toFixed(2) : 0
           }
         })
         .entries(fpData);
