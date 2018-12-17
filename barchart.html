@@ -25,6 +25,10 @@
    * https://amber.rbind.io/blog/2017/05/02/d3nest/
    *
    * exchange rates: https://data.worldbank.org/indicator/PA.NUS.FCRF?end=2017&start=1992
+   *
+   * ppp: https://economics.stackexchange.com/a/17379
+   * https://data.worldbank.org/indicator/PA.NUS.PPP
+   * https://data.oecd.org/conversion/purchasing-power-parities-ppp.htm#indicator-chart
    */
 
   let svg = d3.select("svg"),
@@ -88,6 +92,7 @@
     .defer(
       d3.csv,
       'data/wb_exchange_rates.csv'
+      //'data/wb_purchasing_power_parity.csv'
     )
     .await(function(error, fpData, erData) {
       if (error) throw error;
