@@ -4,7 +4,6 @@
 }
 
 div.tooltip {
-    width: 120px;
     background-color: black;
     color: #fff;
     text-align: left;
@@ -18,6 +17,15 @@ div.tooltip {
     pointer-events: none;
 }
 
+div.tooltip>div {
+    display: block;
+    text-align: right;
+    text-indent: 0;
+    margin-left: 5px;
+    margin-right:5px;
+}
+
+/* arrow */
 div.tooltip::after {
     content: " ";
     position: absolute;
