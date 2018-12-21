@@ -49,3 +49,16 @@ div.tooltip::after {
     vertical-align: middle;
     line-height: normal;
 }
+
+
+path,line {
+    stroke: #455a64;
+}
+
+.tick>text {
+    fill: #455a64;
+}
+
+g>text {
+    fill: #455a64;
+}
