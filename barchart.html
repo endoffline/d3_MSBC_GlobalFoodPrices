@@ -1,20 +1,69 @@
 <!DOCTYPE html>
 
 <head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" type="text/css" href="css/multisetbarchart.css" media="screen" />
-  <!-- load the d3.js library -->
-  <script src="js/d3.js"></script>
+    <meta charset="utf-8">
+    <title>Global Food Prices</title>
+    <link rel="stylesheet" type="text/css" href="css/multisetbarchart.css" media="screen"/>
+    <!-- load the d3.js library -->
+    <script src="js/d3.js"></script>
+
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body>
+
+<body class="container">
+
 <h1>Global Food Prices</h1>
 
-<div id="yearDropdown"></div>
-<div id="countriesList"></div>
-<div id="commoditiesList"></div>
-<svg width="960" height="500"></svg>
+<h2>Multi-set Bar Chart</h2>
+
+<div class="row">
+    <div class="exchangeRadio">
+        <label class="col s4">
+            <input id="pppRadio" class="exchangeGroup" name="exchangeGroup" type="radio" checked />
+            <span>Purchasing Power Parity</span>
+        </label>
+        <label class="col s4">
+            <input id="erRadio" class="exchangeGroup" name="exchangeGroup" type="radio" />
+            <span>Local Currency Unit</span>
+        </label>
+    </div>
+
+    <div id="yearDropdown" class="input-field col s4"></div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <ul class="tabs">
+            <li class="tab col s4"><a class="active" href="#chart">Chart</a></li>
+            <li class="tab col s4"><a href="#countriesTab">Countries</a></li>
+            <li class="tab col s4"><a href="#commoditiesTab">Commodities</a></li>
+        </ul>
+    </div>
+
+    <div id="chart" class="col s12">
+        <svg class="grouped-bar-chart col s12"></svg>
+    </div>
+    <div id="countriesTab" class="col s12">
+        <div class="row" id="countriesList"></div>
+    </div>
+    <div id="commoditiesTab" class="col s12">
+        <div id="commoditiesList"></div>
+    </div>
+</div>
+
 
 <script>
+
+  function initMaterializeCSS() {
+    M.FormSelect.init(document.querySelectorAll('select'));
+    M.Tabs.init(document.querySelector('.tabs'));
+  }
   /*
    * reading data: http://learnjsdata.com/read_data.html
    * nesting data: http://learnjsdata.com/group_data.html
@@ -31,17 +80,22 @@
    * https://data.oecd.org/conversion/purchasing-power-parities-ppp.htm#indicator-chart
    */
 
-  let svg = d3.select("svg"),
-    margin = {top: 20, right: 20, bottom: 30, left: 40},
-    width = +svg.attr("width") - margin.left - margin.right,
-    height = +svg.attr("height") - margin.top - margin.bottom,
-    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  let margin = {top: 20, right: 60, bottom: 30, left: 30},
+    width = 1200 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+  let svgBar = d3.select('.grouped-bar-chart')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
   let div = d3.select('body')
     .append('div')
     .attr('class', 'tooltip')
-    .attr('opacity', 0);
+    .style('opacity', 0);
 
+  let exchangeMenu = d3.selectAll("input[name='exchangeGroup'");
   let yearMenu = d3.select('#yearDropdown');
   let countriesList = d3.select('#countriesList');
   let shortCommoditiesList = d3.select('#commoditiesList');
@@ -60,6 +114,7 @@
     .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
 
+  let selectedPpp = true;
   let selectedYear = '2015';
   let selectedCountries = ['Afghanistan', 'Armenia', 'Democratic Republic of the Congo', 'Ethiopia', 'South Sudan'];
   let selectedShortCommodities = ['Wheat flour', 'Rice', 'Milk', 'Sesame'];
@@ -91,11 +146,21 @@
     )
     .defer(
       d3.csv,
-      'data/wb_exchange_rates.csv'
-      //'data/wb_purchasing_power_parity.csv'
+      'data/wb_purchasing_power_parity.csv'
     )
-    .await(function(error, fpData, erData) {
+    .defer(
+      d3.csv,
+      'data/wb_exchange_rates.csv'
+    )
+    .await(function (error, fpData, pppData, erData) {
       if (error) throw error;
+
+      pppData.forEach(function (d) {
+        d.country = d['Country Name'];
+        d.countryCode = d['Country Code'];
+        d.indicator = d['Indicator Name'];
+        d.indicatorCode = d['Indicator Code'];
+      });
 
       erData.forEach(function (d) {
         d.country = d['Country Name'];
@@ -145,8 +210,12 @@
             unit = unitParts[0];
           }
 
+          let ppps = pppData.filter((d) => d.country === v[0].country).map((d) => d[v[0].year]);
+          let ppp = (ppps.length && ppps[0] && parseFloat(ppps[0])) ? (parseFloat(ppps[0])) : null;
+
           let rates = erData.filter((d) => d.country === v[0].country).map((d) => d[v[0].year]);
           let rate = (rates.length && rates[0] && parseFloat(rates[0])) ? (parseFloat(rates[0])) : null;
+
           return {
             country: v[0].country,
             commodity: v[0].commodity,
@@ -159,8 +228,10 @@
             count: v.length,
             meanOriginal: +d3.mean(v, (d) => d.price).toFixed(2),
             mean: +mean.toFixed(2),
+            purchasingPowerParity: (rate) ? +rate.toFixed(2) : null,
+            meanDollarPpp: (ppp) ? +(mean / ppp).toFixed(2) : 0,
             exchangeRate: (rate) ? +rate.toFixed(2) : null,
-            meanDollar: (rate) ? +(mean / rate).toFixed(2) : 0
+            meanDollarEr: (rate) ? +(mean / rate).toFixed(2) : 0
           }
         })
         .entries(fpData);
@@ -184,6 +255,9 @@
         .text(d => d);
 
       yearMenu
+        .append('label')
+        .text('Select year:');
+      yearMenu
         .selectAll('option')
         .filter((year) => +selectedYear === +year)
         .attr('selected', true);
@@ -196,12 +270,18 @@
         .enter()
         .append('label')
         .attr('for', (country) => country)
-        .text((country) => country)
+        .attr('class', 'col s3')
         .append('input')
         .attr('type', 'checkbox')
         .attr('class', 'checkboxCountry')
         .attr('name', (country) => country)
+        .attr('id', (country) => country)
         .attr('value', (country) => country);
+
+      countriesList
+        .selectAll('label')
+        .append('span')
+        .text((country) => country);
 
       countriesList
         .selectAll('input')
@@ -215,12 +295,18 @@
         .enter()
         .append('label')
         .attr('for', (commodity) => commodity)
-        .text((commodity) => commodity)
+        .attr('class', 'col s3')
         .append('input')
         .attr('type', 'checkbox')
         .attr('class', 'checkboxCommodity')
         .attr('name', (commodity) => commodity)
+        .attr('id', (commodity) => commodity)
         .attr('value', (commodity) => commodity);
+
+      shortCommoditiesList
+        .selectAll('label')
+        .append('span')
+        .text((commodity) => commodity);
 
       shortCommoditiesList
         .selectAll('input')
@@ -228,7 +314,7 @@
         .attr('checked', true);
 
       // Function to create the initial graph
-      let initialGraph = function(year, countries, shortCommodities){
+      let initialGraph = function (exchange, year, countries, shortCommodities) {
 
         let selectedData = flatData.filter(
           (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
@@ -239,11 +325,11 @@
         x0.domain(countries);
         x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
 
-        let maxPrice = d3.max(selectedData, (d) => d.meanDollar);
+        let maxPrice = d3.max(selectedData, (d) => (exchange) ? d.meanDollarPpp : d.meanDollarEr);
         y.domain([0, maxPrice]);
         console.log('maxPrice: ' + maxPrice);
 
-        let prices = g.selectAll(".price")
+        let prices = svgBar.selectAll(".price")
           .data(selectedData)
           .enter().append("g")
           .attr("class", "price")
@@ -252,14 +338,15 @@
         let bars = prices
           .selectAll(".rect")
           .data((d) => shortCommodities.map((key) => {
+            let meanDollar = (exchange) ? d.meanDollarPpp : d.meanDollarEr;
             return {
               key: key,
-              value: (key === d.shortCommodity) ? d.meanDollar : 0,
+              value: (key === d.shortCommodity) ? meanDollar : 0,
               unit: d.unit,
               currency: d.currency,
               meanOriginal: d.meanOriginal,
               unitOriginal: d.unitOriginal
-            }
+            };
           }))
           .enter().append("rect");
 
@@ -274,41 +361,46 @@
               .duration(200)
               .style('opacity', .9);
 
-            div.html('mean: $' + d.value + ', unit: ' + d.unit + ', mean: ' + d.currency + ' ' + d.meanOriginal + ', original unit: ' + d.unitOriginal)
-              .style('left', (d3.event.pageX) + 'px')
-              .style('top', (d3.event.pageY - 28) + 'px')
+            //div.html('<span>mean: $' + d.value + '</span><span>unit: ' + d.unit + '</span><span>mean: ' + d.currency + ' ' + d.meanOriginal + '</span><span>original unit: ' + d.unitOriginal + '</span>')
+            div.html('mean: $' + d.value + '&#10;unit: ' + d.unit + '&#10;mean: ' + d.currency + ' ' + d.meanOriginal + '&#10;original unit: ' + d.unitOriginal)
+              .style('left', (d3.event.pageX + 10) + 'px')
+              .style('top', (d3.event.pageY - 30) + 'px')
           })
-          .on('mouseout', function (d) {
+          .on('mouseout', function () {
             div.transition()
               .duration(500)
               .style('opacity', 0);
-          });
+          })
+        ;
 
-        g.append("g")
+        svgBar.append("g")
           .attr("class", "x-axis")
           .attr("transform", "translate(0," + height + ")")
-          .call(d3.axisBottom(x0));
+          .call(d3.axisBottom(x0))
+          .attr("font-size", 14)
+        ;
 
-        g.append("g")
+        svgBar.append("g")
           .attr("class", "y-axis")
           .call(d3.axisLeft(y).ticks(null, "s"))
+          .attr("font-size", 14)
           .append("text")
-          .attr("x", 2)
-          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("x", 5)
+          .attr("y", y(y.ticks().pop()) - 10)
           .attr("dy", "0.32em")
           .attr("fill", "#000")
           .attr("font-weight", "bold")
           .attr("text-anchor", "start")
-          .text("Price");
+          .attr("font-size", 14)
+          .text(" Price in USD");
 
-        let legend = g.append("g")
-          .attr("font-family", "sans-serif")
-          .attr("font-size", 10)
+        let legend = svgBar.append("g")
+          .attr("font-size", 14)
           .attr("text-anchor", "end")
           .selectAll(".legend")
           .data(shortCommodities.slice().reverse())
           .enter().append("g")
-          .attr("transform", (d, i) => "translate(0," + i * 20 + ")")
+          .attr("transform", (d, i) => "translate(95," + i * 20 + ")")
           .attr("class", "legend");
 
         legend.append("rect")
@@ -324,68 +416,27 @@
           .text((d) => d);
       };
 
-      initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+      initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
 
-      // Update the data
-      let updateGraph = function(year, countries, shortCommodities){
+      exchangeMenu.on('change', function() {
+        let sExchange = d3.select("input[name='exchangeGroup']:checked");
+        console.log(sExchange.attr('id'));
+        selectedPpp = (sExchange.attr('id') === 'pppRadio');
 
-        console.log(countries);
-        let selectedData = flatData.filter(
-          (d) => +d.year === +year && countries.indexOf(d.country) > -1 && shortCommodities.indexOf(d.shortCommodity) > -1
-        );
-
-        x0.domain(countries);
-        x1.domain(shortCommodities).rangeRound([0, x0.bandwidth()]);
-
-        let maxPrice = d3.max(
-          selectedData,
-          (d) => d.mean
-        );
-        y.domain([0, (maxPrice || 100)]);
-        console.log('maxPrice: ' + (maxPrice || 100));
-
-        console.log(selectedData);
-
-
-        let prices = g.selectAll(".price")
-          .data(selectedData);
-
-        // TODO set bars to 0 when there isn't any data available
-        prices.selectAll("rect")
-          .data((d) => shortCommodities.map((key) => {
-            return {key: key, value: (key === d.shortCommodity) ? d.mean : 0}
-          }))
-          .transition()
-          .duration(1000)
-          .attr("x", (d) => x1(d.key))
-          .attr("y", (d) => y(d.value))
-          .attr("width", x1.bandwidth())
-          .attr("height", (d) => height - y(d.value))
-          .attr("fill", (d) => z(d.key));
-
-
-        g.select(".x-axis")
-          .transition()
-          .duration(1000)
-          .call(d3.axisBottom(x0));
-
-        g.select(".y-axis")
-          .transition()
-          .duration(1000)
-          .call(d3.axisLeft(y).ticks(null, "s"));
-
-      };
+        svgBar.selectAll('*').remove();
+        initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
+      });
 
       // Run update function when dropdown selection changes
-      yearMenu.on('change', function(){
+      yearMenu.on('change', function() {
 
         // Find which fruit was selected from the dropdown
         selectedYear = d3.select(this)
           .select("select")
           .property("value");
 
-        g.selectAll('*').remove();
-        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+        svgBar.selectAll('*').remove();
+        initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
       });
 
       countriesList.on('change', function() {
@@ -395,8 +446,8 @@
         let sCountries = d3.selectAll("input.checkboxCountry:checked");
         sCountries.each((country) => selectedCountries.push(country));
         console.log(selectedCountries);
-        g.selectAll('*').remove();
-        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+        svgBar.selectAll('*').remove();
+        initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
       });
 
       shortCommoditiesList.on('change', function() {
@@ -407,76 +458,15 @@
         sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
         console.log('comm');
         console.log(selectedShortCommodities);
-        g.selectAll('*').remove();
-        initialGraph(selectedYear, selectedCountries, selectedShortCommodities);
+        svgBar.selectAll('*').remove();
+        initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
       });
+
+      initMaterializeCSS();
     });
 
-      // data.forEach(function(d) {
-      //   d.Jahr = +d.Jahr;
-      // });
-      //
-      // console.log("data", data);
-      //
-      // var x = d3.scaleBand()
-      //   .range([0, width])
-      //   .padding(0, 1);
-      //
-      // var y = d3.scaleLinear()
-      //   .range([height, 0]);
-      //
-      // x.domain(data.map(function(d) {
-      //   return d.YEAR;
-      // }));
-      //
-      // y.domain([
-      //   d3.min(data, function(d) {
-      //     return d.Jahr;
-      //   }) * 0.95,
-      //   d3.max(data, function (d) {
-      //     return d.Jahr;
-      //   })
-      // ]);
-      //
-      // svg.selectAll('.bar')
-      //   .data(data)
-      //   .enter()
-      //   .append('rect')
-      //   .attr('class', 'bar')
-      //   .attr('x', function(d, i) {
-      //     return x(d.YEAR);
-      //   })
-      //   .attr('y', function(d) {
-      //     return y(d.Jahr);
-      //   })
-      //   .attr('width', x.bandwidth())
-      //   .attr('height', function(d) {
-      //     return height - y(d.Jahr);
-      //   })
-      //   .on('mouseover', function(d) {
-      //     div.transition()
-      //       .duration(200)
-      //       .style('opacity', .9);
-      //
-      //     div.html('in the year ' + d.YEAR + '<br/>' + d.Jahr + ' hours of sun')
-      //       .style('left', (d3.event.pageX) + 'px')
-      //       .style('top', (d3.event.pageY - 28) + 'px')
-      //   })
-      //   .on('mouseout', function(d) {
-      //     div.transition.duration(500)
-      //       .style('opacity', 0);
-      //   });
-      //
-      // svg.append('g')
-      //   .attr('transform', 'translate(0, ' + height + ')')
-      //   .call(d3.axisBottom(x)
-      //     .tickValues(x.domain().filter(function(d, i) {
-      //       return !(i%5)
-      //     }))
-      //   );
-      //
-      // svg.append('g')
-      //   .call(d3.axisLeft(y));
-    //});
 </script>
+
+<!--JavaScript at end of body for optimized loading-->
+<script type="text/javascript" src="js/materialize.min.js"></script>
 </body>
