@@ -102,7 +102,7 @@ window.onload = function () {
             } else if (['pounds', 'pound'].indexOf(unit.toLowerCase()) > -1) {
               price = price * 2.2046;
             }
-            //TODO dozen, cubic meter, gallon, marmite are not converted yet
+            // dozen, cubic meter, gallon, marmite are not converted yet
             return price;
           });
 
@@ -164,6 +164,7 @@ window.onload = function () {
 
       multiSetBarChart(flatData, yearsSet, countriesSet, shortCommoditiesSet);
 
+      choroplethMap(flatData, yearsSet, countriesSet, shortCommoditiesSet);
 
       initMaterializeCSS();
     });
