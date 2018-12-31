@@ -1,5 +1,26 @@
 <!DOCTYPE html>
 
+<!-- Chi: for choropleth map -->
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.24.0/d3-legend.js"></script>
+
+<style>
+  .mCountries {
+    fill: none;
+    stroke: #fff;
+    stroke-linejoin: round;
+  }
+  .legendThreshold {
+      font-size: 12px;
+      font-family: sans-serif;
+  }
+  .caption {
+      fill: #000;
+      text-anchor: start;
+      font-weight: bold;
+  }
+</style>
 <head>
     <meta charset="utf-8">
     <title>Global Food Prices</title>
@@ -14,13 +35,18 @@
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.24.0/d3-legend.js"></script>
+
 </head>
 
 <body class="container">
 
 <h1>Global Food Prices</h1>
 
-<h2>Multi-set Bar Chart</h2>
+<h2>Multi-set Bar Chart & Choropleth Map</h2>
 
 <div class="row">
     <div class="exchangeRadio">
@@ -34,7 +60,7 @@
         </label>
     </div>
 
-    <div id="yearDropdown" class="input-field col s4"></div>
+    <div id="yearDropdown" class="yearSelection input-field col s4"></div>
 </div>
 
 <div class="row">
@@ -57,8 +83,48 @@
     </div>
 </div>
 
+<div class="row">
+    <div class="col s12">
+      <svg class="choropleth col s12" width = "800" height = "600"></svg>
+    </div>
+</div>
+
 
 <script>
+  // Chi: svg for choropleth map
+  let svgMap = d3.select(".choropleth");
+  var mapWidth = +svgMap.attr("width"),
+      mapHeight = +svgMap.attr("height");
+  // Map and projection
+  var path = d3.geoPath();
+  var projection = d3.geoNaturalEarth()
+          .scale(mapWidth / 2 / Math.PI)
+          .translate([mapWidth / 2, mapHeight / 2]);
+  var path = d3.geoPath()
+          .projection(projection);
+  // Data and color scale
+  var mapData = d3.map();
+  var colorScheme = d3.schemeReds[6];
+  colorScheme.unshift("#eee")
+  var colorScale = d3.scaleThreshold()
+      .domain([1, 5, 10, 15, 20, 25])
+      .range(colorScheme);
+  // Legend
+  var g = svgMap.append("g")
+      .attr("class", "legendThreshold")
+      .attr("transform", "translate(20,20)");
+  g.append("text")
+      .attr("class", "caption")
+      .attr("x", 0)
+      .attr("y", -6)
+      .text("Total prices of selected commodities");
+  var labels = ['0', '1-4', '5-9', '10-14', '15-19', '20-24', '> 25'];
+  var legend = d3.legendColor()
+      .labels(function (d) { return labels[d.i]; })
+      .shapePadding(4)
+      .scale(colorScale);
+  svgMap.select(".legendThreshold")
+      .call(legend);
 
   function initMaterializeCSS() {
     M.FormSelect.init(document.querySelectorAll('select'));
@@ -95,7 +161,7 @@
     .attr('class', 'tooltip')
     .style('opacity', 0);
 
-  let exchangeMenu = d3.selectAll("input[name='exchangeGroup'");  // Radio buttons for selecting the exchange rate
+  let exchangeMenu = d3.selectAll("input[name='exchangeGroup']");  // Radio buttons for selecting the exchange rate
   let yearMenu = d3.select('#yearDropdown');                      // Dropdown for selecting the year
   let countriesList = d3.select('#countriesList');                // List of checkboxes for selecting the countries
   let shortCommoditiesList = d3.select('#commoditiesList');       // List of checkboxes for selecting the commodities
@@ -157,7 +223,8 @@
       d3.csv,
       'data/wb_exchange_rates.csv'
     )
-    .await(function (error, fpData, pppData, erData) {
+    .defer(d3.json, "http://enjalot.github.io/wwsd/data/world/world-110m.geojson")
+    .await(function (error, fpData, pppData, erData, topo) {
       if (error) throw error;
 
       // Reassign the columns with space in them to use them later as property for easier access
@@ -433,7 +500,46 @@
           .text((d) => d);
       };
 
+      //Chi: a function to initialize choropleth map
+      //Designed to display all countries in the data, so skipping country selections
+      let initialChoropleth = function (exchange, year, shortCommodities) {
+        let selectedMapData = flatData.filter(
+          (d) => +d.year === +year && shortCommodities.indexOf(d.shortCommodity) > -1
+        );
+        console.log(selectedMapData);
+
+        //Chi: trying to get the sum of prices of all selected commodities from each country for easier map display
+        for (var i = 0; i < selectedMapData.length; i++) {
+          countryName = selectedMapData[i].country;
+          if (mapData.has(countryName)) {
+            meanPrice = mapData.get(countryName);
+            newPrice = meanPrice + (exchange) ? selectedMapData[i].meanDollarPpp : selectedMapData[i].meanDollarEr;
+            mapData.set(countryName, newPrice);
+          } else {
+            meanPrice = (exchange) ? selectedMapData[i].meanDollarPpp : selectedMapData[i].meanDollarEr;
+            mapData.set(countryName, meanPrice);
+          }
+        }
+        //For debug
+        console.log(mapData);
+        //Chi: drawing the map
+        svgMap.append("g")
+            .attr("class", "mCountries")
+            .selectAll("path")
+            .data(topo.features)
+            .enter().append("path")
+                .attr("fill", function (d){
+                    // Get the price data for this country
+                    var price = mapData.get(d.properties.name) || 0;
+                    // Set the color
+                    return colorScale(price);
+                })
+                .attr("d", path);
+      };
+
       initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
+
+      initialChoropleth(selectedPpp, selectedYear, selectedShortCommodities);
 
       // Register event listeners on the radio buttons, dropdown menu, and checkboxes to redraw the graph when the selection has changes
       exchangeMenu.on('change', function() {
@@ -442,6 +548,8 @@
 
         svgBar.selectAll('*').remove();
         initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
+
+        initialChoropleth(selectedPpp, selectedYear, selectedShortCommodities);
       });
 
       yearMenu.on('change', function() {
@@ -452,6 +560,8 @@
 
         svgBar.selectAll('*').remove();
         initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
+
+        initialChoropleth(selectedPpp, selectedYear, selectedShortCommodities);
       });
 
       countriesList.on('change', function() {
@@ -472,6 +582,8 @@
 
         svgBar.selectAll('*').remove();
         initialGraph(selectedPpp, selectedYear, selectedCountries, selectedShortCommodities);
+
+        initialChoropleth(selectedPpp, selectedYear, selectedShortCommodities);
       });
 
       initMaterializeCSS();
