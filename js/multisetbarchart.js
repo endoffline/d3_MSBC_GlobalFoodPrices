@@ -169,10 +169,8 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
 
         tooltip.html(
           '<div>' + d.key + '</div>' +
-          '<div>mean: $' + d.value + '</div>' +
-          '<div>unit: ' + d.unit + '</div>' +
-          '<div>mean: ' + d.currency + ' ' + d.meanOriginal + '</div>' +
-          '<div>original unit: ' + d.unitOriginal + '</div>'
+          '<div>mean: $' + d.value + ' / ' + d.unit + '</div>' +
+          '<div>original mean: ' + d.currency + ' ' + d.meanOriginal + ' / ' + d.unitOriginal + '</div>'
         )
           .style('left', (d3.event.pageX + 10) + 'px')
           .style('top', (d3.event.pageY - 30) + 'px')
