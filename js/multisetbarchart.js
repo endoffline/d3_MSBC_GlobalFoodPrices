@@ -2,7 +2,7 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
 
   let margin = {top: 20, right: 160, bottom: 30, left: 30},
     width = document.getElementsByClassName('container')[0].clientWidth - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    height = width / 2 - margin.top - margin.bottom;
 
   let svgBar = d3.select('.msbc-chart')
     .attr('width', width + margin.left + margin.right)

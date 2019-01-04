@@ -58,7 +58,8 @@ window.onload = function () {
       d3.csv,
       'data/wb_exchange_rates.csv'
     )
-    .await(function (error, fpData, pppData, erData) {
+    .defer(d3.json, "http://enjalot.github.io/wwsd/data/world/world-110m.geojson")
+    .await(function (error, fpData, pppData, erData, topo) {
       if (error) throw error;
 
       // Reassign the columns with space in them to use them later as property for easier access
@@ -164,7 +165,7 @@ window.onload = function () {
 
       multiSetBarChart(flatData, yearsSet, countriesSet, shortCommoditiesSet);
 
-      choroplethMap(flatData, yearsSet, countriesSet, shortCommoditiesSet);
+      choroplethMap(flatData, topo, yearsSet, countriesSet, shortCommoditiesSet);
 
       initMaterializeCSS();
     });

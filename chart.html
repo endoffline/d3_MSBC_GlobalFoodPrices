@@ -57,6 +57,21 @@
 </div>
 
 <h2>Choropleth Map</h2>
+
+<div class="row">
+    <div class="cm-exchangeRadio">
+        <label class="col s4">
+            <input id="cm-pppRadio" class="cm-exchangeGroup" name="cm-exchangeGroup" type="radio" checked/>
+            <span>Purchasing Power Parity</span>
+        </label>
+        <label class="col s4">
+            <input id="cm-erRadio" class="cm-exchangeGroup" name="cm-exchangeGroup" type="radio"/>
+            <span>Local Currency Unit</span>
+        </label>
+    </div>
+
+    <div id="cm-yearDropdown" class="input-field col s4"></div>
+</div>
 <div class="row">
     <!-- TODO add menues -->
     <div id="cm-chart" class="col s12">
@@ -71,5 +86,8 @@
 <script type="text/javascript" src="js/multisetbarchart.js"></script>
 <script type="text/javascript" src="js/choroplethmap.js"></script>
 <script type="text/javascript" src="js/materialize/materialize.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.24.0/d3-legend.js"></script>
 
 </body>
