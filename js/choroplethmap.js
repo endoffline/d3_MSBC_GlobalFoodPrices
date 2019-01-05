@@ -50,7 +50,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr("x", 0)
     .attr("y", -6)
     .text("Total prices of selected commodities");
-  let labels = ['0', '1-4', '5-9', '10-14', '15-19', '20-24', '> 25'];
+  let labels = ['0', '0.01-0.24', '0.25-0.49', '0.5-0.99', '1-1.99', '2-4.99', '> 4.9'];
   let legend = d3.legendColor()
     .labels(function (d) { return labels[d.i]; })
     .shapePadding(1)
@@ -127,7 +127,12 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
       countryName = selectedData[i].country;
       if (mapData.has(countryName)) {
         meanPrice = mapData.get(countryName);
-        newPrice = meanPrice + (exchange) ? selectedData[i].meanDollarPpp : selectedData[i].meanDollarEr;
+        if (exchange) {
+          newPrice = meanPrice + selectedData[i].meanDollarPpp;
+        } else {
+          newPrice = meanPrice + selectedData[i].meanDollarEr;
+        }
+        //newPrice = meanPrice + (exchange) ? selectedData[i].meanDollarPpp : selectedData[i].meanDollarEr;
         mapData.set(countryName, newPrice);
       } else {
         meanPrice = (exchange) ? selectedData[i].meanDollarPpp : selectedData[i].meanDollarEr;
