@@ -19,20 +19,20 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr('height', height + margin.top + margin.bottom)
     .append('g')
     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-  
+
   // Map and projection
   let projection = d3.geoNaturalEarth1()
     .scale(width / 2 / Math.PI)
     .translate([width / 2, height / 2]);
-  
+
   let path = d3.geoPath()
     .projection(projection);
-  
+
   let tooltip = d3.select('body')
     .append('div')
     .attr('class', 'tooltip')
     .style('opacity', 0);
-  
+
   // Data and color scale
   let mapData = d3.map();
   let colorScheme = d3.schemeReds[6];
@@ -40,7 +40,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   let colorScale = d3.scaleThreshold()
     .domain([0.01, 0.25, 0.5, 1, 2, 5])
     .range(colorScheme);
-  
+
   // TODO fix legend
   let g = svgMap.append("g")
     .attr("class", "legendThreshold")
@@ -55,19 +55,19 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .labels(function (d) { return labels[d.i]; })
     .shapePadding(1)
     .scale(colorScale);
-  
+
   svgMap.select(".legendThreshold")
     .call(legend);
-  
+
   // Selected values for the chart; values get initialized to fill the chart
   let selectedPpp = true;
   let selectedYear = '2015';
   let selectedShortCommodities = ['Maize'];
-  
+
   let exchangeMenu = d3.selectAll("input[name='cm-exchangeGroup']");  // Radio buttons for selecting the exchange rate
   let yearMenu = d3.select('#cm-yearDropdown');                      // Dropdown for selecting the year
   let shortCommoditiesList = d3.select('#cm-commoditiesList');       // List of checkboxes for selecting the commodities
-  
+
   // Dropdown menu for year selection
   yearMenu
     .append('select')
@@ -84,7 +84,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .selectAll('option')
     .filter((year) => +selectedYear === +year)
     .attr('selected', true);
-  
+
   // TODO change to radio buttons
   // Checkbox list for commodity selection
   shortCommoditiesList
@@ -113,7 +113,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .selectAll('input')
     .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
     .attr('checked', true);
-  
+
   //Chi: a function to initialize choropleth map
   //Designed to display all countries in the data, so skipping country selections
   let initialGraph = function (exchange, year, shortCommodities) {
@@ -152,7 +152,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   };
 
   initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
-  
+
   let updateSelections = function () {
     shortCommoditiesList
       .selectAll('span')
@@ -163,35 +163,35 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
         + ')'
       );
   };
-  
+
   // Register event listeners on the radio buttons, dropdown menu, and checkboxes to redraw the graph when the selection has changes
   exchangeMenu.on('change', function () {
     let sExchange = d3.select("input[name='cm-exchangeGroup']:checked");
     selectedPpp = (sExchange.attr('id') === 'cm-pppRadio');
-    
-    svgMap.selectAll('*').remove();
+
+    //svgMap.selectAll('*').remove();
     initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
   });
-  
+
   yearMenu.on('change', function () {
     // Find which year was selected from the dropdown
     selectedYear = d3.select(this)
       .select("select")
       .property("value");
-    
+
     updateSelections();
-    svgMap.selectAll('*').remove();
+    //svgMap.selectAll('*').remove();
     initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
   });
-  
+
   shortCommoditiesList.on('change', function () {
     selectedShortCommodities = [];
-    
+
     let sCommodities = d3.selectAll("input.cm-checkboxCommodity:checked");
     sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
-    
+
     updateSelections();
-    svgMap.selectAll('*').remove();
+    //svgMap.selectAll('*').remove();
     initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
   });
 };
