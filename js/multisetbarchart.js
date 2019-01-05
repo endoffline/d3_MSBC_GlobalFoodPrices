@@ -92,14 +92,14 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
     .data(shortCommoditiesSet)
     .enter()
     .append('label')
-    .attr('for', (commodity) => commodity)
+    .attr('for', (commodity) => 'msbc-' + commodity)
     .attr('class', 'col s3')
     .append('input')
     .attr('type', 'checkbox')
     .attr('class', 'msbc-checkboxCommodity')
-    .attr('name', (commodity) => commodity)
-    .attr('id', (commodity) => commodity)
-    .attr('value', (commodity) => commodity);
+    .attr('name', (commodity) => 'msbc-' + commodity)
+    .attr('id', (commodity) => 'msbc-' + commodity)
+    .attr('value', (commodity) => 'msbc-' + commodity);
   shortCommoditiesList
     .selectAll('label')
     .append('span')

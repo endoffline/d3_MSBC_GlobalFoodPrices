@@ -38,7 +38,7 @@
 
 <div class="row">
     <div class="col s12">
-        <ul class="tabs">
+        <ul id="msbc-tabs" class="tabs">
             <li class="tab col s4"><a class="active" href="#msbc-chart">Chart</a></li>
             <li class="tab col s4"><a href="#msbc-countriesTab">Countries</a></li>
             <li class="tab col s4"><a href="#msbc-commoditiesTab">Commodities</a></li>
@@ -73,9 +73,19 @@
     <div id="cm-yearDropdown" class="input-field col s4"></div>
 </div>
 <div class="row">
-    <!-- TODO add menues -->
+
+    <div class="col s12">
+        <ul id="cm-tabs" class="tabs">
+            <li class="tab col s4"><a class="active" href="#cm-chart">Chart</a></li>
+            <li class="tab col s4"><a href="#cm-commoditiesTab">Commodities</a></li>
+        </ul>
+    </div>
+
     <div id="cm-chart" class="col s12">
         <svg class="cm-chart col s12"></svg>
+    </div>
+    <div id="cm-commoditiesTab" class="col s12">
+        <div id="cm-commoditiesList"></div>
     </div>
 </div>
 

@@ -14,7 +14,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     width = document.getElementsByClassName('container')[0].clientWidth - margin.left - margin.right,
     height = width / 2 - margin.top - margin.bottom;
 
-  let svg = d3.select('.cm-chart')
+  let svgMap = d3.select('.cm-chart')
     .attr('width', width + margin.left + margin.right)
     .attr('height', height + margin.top + margin.bottom)
     .append('g')
@@ -41,7 +41,8 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .domain([0.01, 0.25, 0.5, 1, 2, 5])
     .range(colorScheme);
   
-  let g = svg.append("g")
+  // TODO fix legend
+  let g = svgMap.append("g")
     .attr("class", "legendThreshold")
     .attr("transform", "translate(20,20)");
   g.append("text")
@@ -55,19 +56,63 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .shapePadding(1)
     .scale(colorScale);
   
-  svg.select(".legendThreshold")
+  svgMap.select(".legendThreshold")
     .call(legend);
   
   // Selected values for the chart; values get initialized to fill the chart
   let selectedPpp = true;
   let selectedYear = '2015';
-  let selectedShortCommodity = 'Maize';
-
-  // TODO add menus for year and commodity selection
-  /*
-   * add HTML code in chart.html
-   * initialize menu variables with d3.select/d3.selectAll
-   */
+  let selectedShortCommodities = ['Maize'];
+  
+  let exchangeMenu = d3.selectAll("input[name='cm-exchangeGroup']");  // Radio buttons for selecting the exchange rate
+  let yearMenu = d3.select('#cm-yearDropdown');                      // Dropdown for selecting the year
+  let shortCommoditiesList = d3.select('#cm-commoditiesList');       // List of checkboxes for selecting the commodities
+  
+  // Dropdown menu for year selection
+  yearMenu
+    .append('select')
+    .selectAll('option')
+    .data(yearsSet)
+    .enter()
+    .append('option')
+    .attr('value', (year) => year)
+    .text((year) => year + ' (' + getYearItemsCount(flatData, year) + ')');
+  yearMenu
+    .append('label')
+    .text('Select year:');
+  yearMenu
+    .selectAll('option')
+    .filter((year) => +selectedYear === +year)
+    .attr('selected', true);
+  
+  // TODO change to radio buttons
+  // Checkbox list for commodity selection
+  shortCommoditiesList
+    .selectAll('input')
+    .data(shortCommoditiesSet)
+    .enter()
+    .append('label')
+    .attr('for', (commodity) => 'cm-' + commodity)
+    .attr('class', 'col s3')
+    .append('input')
+    .attr('type', 'checkbox')
+    .attr('class', 'cm-checkboxCommodity')
+    .attr('name', (commodity) => 'cm-' + commodity)
+    .attr('id', (commodity) => 'cm-' + commodity)
+    .attr('value', (commodity) => 'cm-' + commodity);
+  shortCommoditiesList
+    .selectAll('label')
+    .append('span')
+    .text((commodity) =>
+      commodity
+      + ' ('
+      + getShortCommodityItemsCountDependingOnYear(flatData, selectedYear, commodity)
+      + ')'
+    );
+  shortCommoditiesList
+    .selectAll('input')
+    .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
+    .attr('checked', true);
   
   //Chi: a function to initialize choropleth map
   //Designed to display all countries in the data, so skipping country selections
@@ -76,6 +121,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
       (d) => +d.year === +year && shortCommodities.indexOf(d.shortCommodity) > -1
     );
     console.log(selectedData);
+    mapData = d3.map();
     //Chi: trying to get the sum of prices of all selected commodities from each country for easier map display
     for (var i = 0; i < selectedData.length; i++) {
       countryName = selectedData[i].country;
@@ -91,7 +137,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     //For debug
     console.log(mapData);
     //Chi: drawing the map
-    svg.append("g")
+    svgMap.append("g")
       .attr("class", "mCountries")
       .selectAll("path")
       .data(topo.features)
@@ -105,8 +151,47 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
       .attr("d", path);
   };
 
-  initialGraph(selectedPpp, selectedYear, selectedShortCommodity);
-
-  // TODO when selected year or commodity changes, register an eventlistener
-  // remember to delete all elements of the svg before calling initialGraph()
+  initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+  
+  let updateSelections = function () {
+    shortCommoditiesList
+      .selectAll('span')
+      .text((commodity) =>
+        commodity
+        + ' ('
+        + getShortCommodityItemsCountDependingOnYear(flatData, selectedYear, commodity)
+        + ')'
+      );
+  };
+  
+  // Register event listeners on the radio buttons, dropdown menu, and checkboxes to redraw the graph when the selection has changes
+  exchangeMenu.on('change', function () {
+    let sExchange = d3.select("input[name='cm-exchangeGroup']:checked");
+    selectedPpp = (sExchange.attr('id') === 'cm-pppRadio');
+    
+    svgMap.selectAll('*').remove();
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+  });
+  
+  yearMenu.on('change', function () {
+    // Find which year was selected from the dropdown
+    selectedYear = d3.select(this)
+      .select("select")
+      .property("value");
+    
+    updateSelections();
+    svgMap.selectAll('*').remove();
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+  });
+  
+  shortCommoditiesList.on('change', function () {
+    selectedShortCommodities = [];
+    
+    let sCommodities = d3.selectAll("input.cm-checkboxCommodity:checked");
+    sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
+    
+    updateSelections();
+    svgMap.selectAll('*').remove();
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+  });
 };

@@ -16,7 +16,8 @@
 
 function initMaterializeCSS() {
   M.FormSelect.init(document.querySelectorAll('select'));
-  M.Tabs.init(document.querySelector('.tabs'));
+  M.Tabs.init(document.querySelector('#msbc-tabs'));
+  M.Tabs.init(document.querySelector('#cm-tabs'));
 }
 
 window.onload = function () {
