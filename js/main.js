@@ -156,7 +156,7 @@ window.onload = function () {
       let unitsSet = [...(new Set(flatData.map(({unit}) => unit)))].sort();
 
       // Get every year contained in the CSV to fill the dropdown
-      let yearsSet = [...(new Set(flatData.map(({year}) => year)))];
+      let yearsSet = [...(new Set(flatData.map(({year}) => year)))].sort();
 
       // Get every country contained in the CSV to fill the checklist
       let countriesSet = [...(new Set(flatData.map(({country}) => country)))].sort();

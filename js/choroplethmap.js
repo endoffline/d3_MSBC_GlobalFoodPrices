@@ -66,13 +66,14 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
 
   let exchangeMenu = d3.selectAll("input[name='cm-exchangeGroup']");  // Radio buttons for selecting the exchange rate
   let yearMenu = d3.select('#cm-yearDropdown');                      // Dropdown for selecting the year
+  let yearSlider = d3.select('#cm-yearSlider');
   let shortCommoditiesList = d3.select('#cm-commoditiesList');       // List of checkboxes for selecting the commodities
 
   // Dropdown menu for year selection
   yearMenu
     .append('select')
     .selectAll('option')
-    .data(yearsSet)
+    .data(yearsSet.slice().reverse())
     .enter()
     .append('option')
     .attr('value', (year) => year)
@@ -84,6 +85,11 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .selectAll('option')
     .filter((year) => +selectedYear === +year)
     .attr('selected', true);
+  
+  yearSlider
+    .attr('min', yearsSet[0])
+    .attr('max', yearsSet[yearsSet.length-1])
+    .attr('value', selectedYear);
 
   // TODO change to radio buttons
   // Checkbox list for commodity selection
@@ -203,6 +209,16 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
       .select("select")
       .property("value");
 
+    updateSelections();
+    //svgMap.selectAll('*').remove();
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+  });
+  
+  yearSlider.on('input', function () {
+    // Find which year was selected from the dropdown
+    selectedYear = d3.select(this)
+      .property("value");
+    
     updateSelections();
     //svgMap.selectAll('*').remove();
     initialGraph(selectedPpp, selectedYear, selectedShortCommodities);

@@ -44,7 +44,7 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
   yearMenu
     .append('select')
     .selectAll('option')
-    .data(yearsSet)
+    .data(yearsSet.slice().reverse())
     .enter()
     .append('option')
     .attr('value', (year) => year)
