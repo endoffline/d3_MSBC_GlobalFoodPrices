@@ -36,12 +36,11 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   // Data and color scale
   let mapData = d3.map();
   let colorScheme = d3.schemeReds[9];
-  colorScheme.unshift("#eee")
+  colorScheme.unshift("#eee");
   let colorScale = d3.scaleThreshold()
     .domain([0.01, 0.25, 0.5, 1, 2, 5, 10, 20, 50])
     .range(colorScheme);
-
-  // TODO fix legend
+  
   let g = svgMap.append("g")
     .attr("class", "legendThreshold")
     .attr("transform", "translate(20,20)");
@@ -73,7 +72,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   // Selected values for the chart; values get initialized to fill the chart
   let selectedPpp = true;
   let selectedYear = '2015';
-  let selectedShortCommodities = ['Maize'];
+  let selectedShortCommodities = ['Rice'];
 
   let exchangeMenu = d3.selectAll("input[name='cm-exchangeGroup']");  // Radio buttons for selecting the exchange rate
   let yearMenu = d3.select('#cm-yearDropdown');                       // Dropdown for selecting the year
