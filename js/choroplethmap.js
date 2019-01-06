@@ -35,10 +35,10 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
 
   // Data and color scale
   let mapData = d3.map();
-  let colorScheme = d3.schemeReds[6];
+  let colorScheme = d3.schemeReds[9];
   colorScheme.unshift("#eee")
   let colorScale = d3.scaleThreshold()
-    .domain([0.01, 0.25, 0.5, 1, 2, 5])
+    .domain([0.01, 0.25, 0.5, 1, 2, 5, 10, 20, 50])
     .range(colorScheme);
 
   // TODO fix legend
@@ -49,8 +49,19 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr("class", "caption")
     .attr("x", 0)
     .attr("y", -6)
-    .text("Total prices of selected commodities");
-  let labels = ['0', '0.01-0.24', '0.25-0.49', '0.5-0.99', '1-1.99', '2-4.99', '> 4.9'];
+    .text("Total prices of selected commodities in USD");
+  let labels = [
+    '\u00A0\u00A00.00',
+    '\u00A0\u00A00.01 - \u00A0\u00A00.24',
+    '\u00A0\u00A00.25 - \u00A0\u00A00.49',
+    '\u00A0\u00A00.50 - \u00A0\u00A00.99',
+    '\u00A0\u00A01.00 - \u00A0\u00A01.99',
+    '\u00A0\u00A02.00 - \u00A0\u00A04.99',
+    '\u00A0\u00A05.00 - \u00A0\u00A09.99',
+    '10.00 - 19.99',
+    '20.00 - 49.99',
+    '>= 50.00'
+  ];
   let legend = d3.legendColor()
     .labels(function (d) { return labels[d.i]; })
     .shapePadding(1)
