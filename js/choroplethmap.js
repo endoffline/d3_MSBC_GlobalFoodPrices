@@ -33,9 +33,11 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr('class', 'tooltip')
     .style('opacity', 0);
 
+  let selectedValues = d3.select('#cm-selectedValues');
   // Data and color scale
   let mapData = d3.map();
-  let colorScheme = d3.schemeReds[9];
+  //let colorScheme = d3.schemeReds[9];
+  let colorScheme = ['#b2dfdb', '#4db6ac', '#009688', '#e1bee7', '#ba68c8', '#9c27b0', '#f44336', '#d32f2f', '#b71c1c'];
   colorScheme.unshift("#eee");
   let colorScale = d3.scaleThreshold()
     .domain([0.01, 0.25, 0.5, 1, 2, 5, 10, 20, 50])
@@ -128,10 +130,26 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .selectAll('input')
     .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
     .attr('checked', true);
-
+  
+  let updateSelections = function () {
+    shortCommoditiesList
+      .selectAll('span')
+      .text((commodity) =>
+        commodity
+        + ' ('
+        + getShortCommodityItemsCountDependingOnYear(flatData, selectedYear, commodity)
+        + ')'
+      );
+  };
+  
+  let updateSelectedValuesHTML = function() {
+    selectedValues.html(selectedYear + ', ' + selectedShortCommodities);
+  };
+  
   //Chi: a function to initialize choropleth map
   //Designed to display all countries in the data, so skipping country selections
   let initialGraph = function (exchange, year, shortCommodities) {
+    
     let selectedData = flatData.filter(
       (d) => +d.year === +year && shortCommodities.indexOf(d.shortCommodity) > -1
     );
@@ -169,7 +187,10 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
         // Set the color
         return colorScale(price);
       })
+      .attr('stroke', '#455a64')
+      .attr('stroke-width', '1')
       .attr("d", path)
+      .attr('id', (d) => 'cm-path-' + d.properties.name)
       .on('mouseover', function (d) {
         tooltip.transition()
           .duration(200)
@@ -180,28 +201,30 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
           '<div>' + ((mapData.get(d.properties.name)) ? '$' + mapData.get(d.properties.name) : 'no data') + '</div>'
         )
           .style('left', (d3.event.pageX + 10) + 'px')
-          .style('top', (d3.event.pageY - 30) + 'px')
+          .style('top', (d3.event.pageY - 30) + 'px');
+        
+        if ((mapData.get(d.properties.name))) {
+          d3.select(this)
+            .attr('stroke', '#ffd54f')
+            .attr('stroke-width', '3');
+        }
       })
       .on('mouseout', function () {
         tooltip.transition()
           .duration(500)
           .style('opacity', 0);
+        
+        d3.select(this)
+          .attr('stroke', '#455a64')
+          .attr('stroke-width', '1');
+        
       });
+  
+    updateSelectedValuesHTML();
   };
-
+  
   initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
-
-  let updateSelections = function () {
-    shortCommoditiesList
-      .selectAll('span')
-      .text((commodity) =>
-        commodity
-        + ' ('
-        + getShortCommodityItemsCountDependingOnYear(flatData, selectedYear, commodity)
-        + ')'
-      );
-  };
-
+  
   // Register event listeners on the radio buttons, dropdown menu, and checkboxes to redraw the graph when the selection has changes
   exchangeMenu.on('change', function () {
     let sExchange = d3.select("input[name='cm-exchangeGroup']:checked");

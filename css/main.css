@@ -51,10 +51,6 @@ div.tooltip::after {
 }
 
 
-path,line {
-    stroke: #455a64;
-}
-
 .tick>text {
     fill: #455a64;
 }
