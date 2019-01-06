@@ -27,7 +27,9 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
     .rangeRound([height, 0]);
 
   let z = d3.scaleOrdinal() // Colors for the bars
-    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+  //  .range(["#ffc107", "#f44336", "#00bcd4", "#e91e63", "#ff9800", "#9c27b0", "#673ab7", "#3f51b5", "#2196f3", "##009688", "#4caf50", "#8bc34a", "#cddc39", "#ffeb3b", "#ff5722", "#795548", "#607d8b"]);
+    .range(['#4db6ac', '#ba68c8', '#d32f2f', '#009688', '#9c27b0', '#b71c1c', '#b2dfdb', '#e1bee7', '#f44336']);
+  //  .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
   // Selected values for the chart; values get initialized to fill the chart
   let selectedPpp = true;
