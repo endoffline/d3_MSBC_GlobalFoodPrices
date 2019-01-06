@@ -12,6 +12,8 @@
  * ppp: https://economics.stackexchange.com/a/17379
  * https://data.worldbank.org/indicator/PA.NUS.PPP
  * https://data.oecd.org/conversion/purchasing-power-parities-ppp.htm#indicator-chart
+ *
+ * Geo data: https://enjalot.github.io/wwsd/data/world/world-110m.geojson
  */
 
 function initMaterializeCSS() {
@@ -59,7 +61,7 @@ window.onload = function () {
       d3.csv,
       'data/wb_exchange_rates.csv'
     )
-    .defer(d3.json, "http://enjalot.github.io/wwsd/data/world/world-110m.geojson")
+    .defer(d3.json, 'data/world-110m.geojson')
     .await(function (error, fpData, pppData, erData, topo) {
       if (error) throw error;
 
