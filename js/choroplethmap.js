@@ -76,9 +76,9 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   let selectedShortCommodities = ['Maize'];
 
   let exchangeMenu = d3.selectAll("input[name='cm-exchangeGroup']");  // Radio buttons for selecting the exchange rate
-  let yearMenu = d3.select('#cm-yearDropdown');                      // Dropdown for selecting the year
-  let yearSlider = d3.select('#cm-yearSlider');
-  let shortCommoditiesList = d3.select('#cm-commoditiesList');       // List of checkboxes for selecting the commodities
+  let yearMenu = d3.select('#cm-yearDropdown');                       // Dropdown for selecting the year
+  let yearSlider = d3.select('#cm-yearSlider');                       // Range slider for selecting the year
+  let shortCommoditiesList = d3.select('#cm-commoditiesList');        // List of radiobuttons for selecting the commodities
 
   // Dropdown menu for year selection
   yearMenu
@@ -101,9 +101,8 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr('min', yearsSet[0])
     .attr('max', yearsSet[yearsSet.length-1])
     .attr('value', selectedYear);
-
-  // TODO change to radio buttons
-  // Checkbox list for commodity selection
+  
+  // list for commodity selection
   shortCommoditiesList
     .selectAll('input')
     .data(shortCommoditiesSet)
@@ -112,9 +111,9 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr('for', (commodity) => 'cm-' + commodity)
     .attr('class', 'col s3')
     .append('input')
-    .attr('type', 'checkbox')
-    .attr('class', 'cm-checkboxCommodity')
-    .attr('name', (commodity) => 'cm-' + commodity)
+    .attr('type', 'radio')
+    .attr('class', 'cm-radioCommodity')
+    .attr('name', 'cm-radioCommodity')
     .attr('id', (commodity) => 'cm-' + commodity)
     .attr('value', (commodity) => 'cm-' + commodity);
   shortCommoditiesList
@@ -159,7 +158,6 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     //For debug
     console.log(mapData);
     console.log(topo);
-    console.log('test');
     //Chi: drawing the map
     svgMap.append("g")
       .attr("class", "mCountries")
@@ -238,7 +236,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   shortCommoditiesList.on('change', function () {
     selectedShortCommodities = [];
 
-    let sCommodities = d3.selectAll("input.cm-checkboxCommodity:checked");
+    let sCommodities = d3.selectAll("input.cm-radioCommodity:checked");
     sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
 
     updateSelections();
