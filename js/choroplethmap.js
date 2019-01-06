@@ -141,6 +141,8 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     }
     //For debug
     console.log(mapData);
+    console.log(topo);
+    console.log('test');
     //Chi: drawing the map
     svgMap.append("g")
       .attr("class", "mCountries")
@@ -153,7 +155,24 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
         // Set the color
         return colorScale(price);
       })
-      .attr("d", path);
+      .attr("d", path)
+      .on('mouseover', function (d) {
+        tooltip.transition()
+          .duration(200)
+          .style('opacity', .9);
+    
+        tooltip.html(
+          '<div>' + d.properties.name + '</div>' +
+          '<div>' + ((mapData.get(d.properties.name)) ? '$' + mapData.get(d.properties.name) : 'no data') + '</div>'
+        )
+          .style('left', (d3.event.pageX + 10) + 'px')
+          .style('top', (d3.event.pageY - 30) + 'px')
+      })
+      .on('mouseout', function () {
+        tooltip.transition()
+          .duration(500)
+          .style('opacity', 0);
+      });
   };
 
   initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
