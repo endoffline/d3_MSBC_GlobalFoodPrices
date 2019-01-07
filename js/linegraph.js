@@ -28,7 +28,7 @@ let yScale = d3.scaleLinear()
   //.domain([0, 1]) // input
   .range([height, 0]); // output
 
-let color = d3.scaleOrdinal(d3.schemeCategory10);
+let color = d3.scaleOrdinal().range(['#ffc107', '#f44336']);
 let selectedValues = d3.select('#lg-selectedValues');
 
 let updateSelectedValuesHTML = function(country, commodity) {
@@ -40,7 +40,7 @@ let initLineGraph = function (flatData, yearsSet, exchange, year, country, short
   console.log(exchange + year + country + shortCommodity);
   // Filter the data according to the chosen values
   let selectedData = flatData.filter(
-    (d) => d.year !== 2018 && d.country === country && d.shortCommodity == shortCommodity
+    (d) => d.year !== 2018 && d.country === country && d.shortCommodity === shortCommodity
   );
   
   let transformedData =

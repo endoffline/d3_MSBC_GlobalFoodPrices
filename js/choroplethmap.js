@@ -36,21 +36,21 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   let selectedValues = d3.select('#cm-selectedValues');
   // Data and color scale
   let mapData = d3.map();
-  //let colorScheme = d3.schemeReds[9];
-  let colorScheme = ['#b2dfdb', '#4db6ac', '#009688', '#e1bee7', '#ba68c8', '#9c27b0', '#f44336', '#d32f2f', '#b71c1c'];
-  colorScheme.unshift("#eee");
+  let colorScheme = d3.schemeReds[9];
+  //let colorScheme = ['#b2dfdb', '#4db6ac', '#009688', '#e1bee7', '#ba68c8', '#9c27b0', '#f44336', '#d32f2f', '#b71c1c'];
+  colorScheme.unshift('#eee');
   let colorScale = d3.scaleThreshold()
     .domain([0.01, 0.25, 0.5, 1, 2, 5, 10, 20, 50])
     .range(colorScheme);
   
-  let g = svgMap.append("g")
-    .attr("class", "legendThreshold")
-    .attr("transform", "translate(20,20)");
-  g.append("text")
-    .attr("class", "caption")
-    .attr("x", 0)
-    .attr("y", -6)
-    .text("Total prices of selected commodities in USD");
+  let g = svgMap.append('g')
+    .attr('class', 'legendThreshold')
+    .attr('transform', 'translate(20,20)');
+  g.append('text')
+    .attr('class', 'caption')
+    .attr('x', 0)
+    .attr('y', -6)
+    .text('Total prices of selected commodities in USD');
   let labels = [
     '\u00A0\u00A00.00',
     '\u00A0\u00A00.01 - \u00A0\u00A00.24',
@@ -68,13 +68,13 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .shapePadding(1)
     .scale(colorScale);
 
-  svgMap.select(".legendThreshold")
+  svgMap.select('.legendThreshold')
     .call(legend);
 
   // Selected values for the chart; values get initialized to fill the chart
   let selectedPpp = true;
   let selectedYear = '2015';
-  let selectedShortCommodities = ['Rice'];
+  let selectedShortCommodity = 'Rice';
 
   let exchangeMenu = d3.selectAll("input[name='cm-exchangeGroup']");  // Radio buttons for selecting the exchange rate
   let yearMenu = d3.select('#cm-yearDropdown');                       // Dropdown for selecting the year
@@ -116,7 +116,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr('class', 'cm-radioCommodity')
     .attr('name', 'cm-radioCommodity')
     .attr('id', (commodity) => 'cm-' + commodity)
-    .attr('value', (commodity) => 'cm-' + commodity);
+    .attr('value', (commodity) => commodity);
   shortCommoditiesList
     .selectAll('label')
     .append('span')
@@ -128,7 +128,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     );
   shortCommoditiesList
     .selectAll('input')
-    .filter((commodity) => selectedShortCommodities.indexOf(commodity) > -1)
+    .filter((commodity) => selectedShortCommodity === commodity)
     .attr('checked', true);
   
   let updateSelections = function () {
@@ -143,53 +143,40 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
   };
   
   let updateSelectedValuesHTML = function() {
-    selectedValues.html(selectedYear + ', ' + selectedShortCommodities);
+    selectedValues.html(selectedYear + ', ' + selectedShortCommodity);
   };
   
   //Chi: a function to initialize choropleth map
   //Designed to display all countries in the data, so skipping country selections
-  let initialGraph = function (exchange, year, shortCommodities) {
+  let initialGraph = function (exchange, year, shortCommodity) {
     
     let selectedData = flatData.filter(
-      (d) => +d.year === +year && shortCommodities.indexOf(d.shortCommodity) > -1
+      (d) => +d.year === +year && d.shortCommodity === shortCommodity
     );
     console.log(selectedData);
     mapData = d3.map();
     //Chi: trying to get the sum of prices of all selected commodities from each country for easier map display
     for (var i = 0; i < selectedData.length; i++) {
-      countryName = selectedData[i].country;
-      if (mapData.has(countryName)) {
-        meanPrice = mapData.get(countryName);
-        if (exchange) {
-          newPrice = meanPrice + selectedData[i].meanDollarPpp;
-        } else {
-          newPrice = meanPrice + selectedData[i].meanDollarEr;
-        }
-        //newPrice = meanPrice + (exchange) ? selectedData[i].meanDollarPpp : selectedData[i].meanDollarEr;
-        mapData.set(countryName, newPrice);
-      } else {
-        meanPrice = (exchange) ? selectedData[i].meanDollarPpp : selectedData[i].meanDollarEr;
-        mapData.set(countryName, meanPrice);
-      }
+      let countryName = selectedData[i].country;
+      let meanPrice = (exchange) ? selectedData[i].meanDollarPpp : selectedData[i].meanDollarEr;
+      mapData.set(countryName, meanPrice);
     }
-    //For debug
-    console.log(mapData);
-    console.log(topo);
+    
     //Chi: drawing the map
-    svgMap.append("g")
-      .attr("class", "mCountries")
-      .selectAll("path")
+    svgMap.append('g')
+      .attr('class', 'mCountries')
+      .selectAll('path')
       .data(topo.features)
-      .enter().append("path")
-      .attr("fill", function (d){
+      .enter().append('path')
+      .attr('fill', function (d){
         // Get the price data for this country
-        var price = mapData.get(d.properties.name) || 0;
+        let price = mapData.get(d.properties.name) || 0;
         // Set the color
         return colorScale(price);
       })
       .attr('stroke', '#455a64')
       .attr('stroke-width', '1')
-      .attr("d", path)
+      .attr('d', path)
       .attr('id', (d) => 'cm-path-' + d.properties.name)
       .on('mouseover', function (d) {
         tooltip.transition()
@@ -219,54 +206,51 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
           .attr('stroke-width', '1');
         
       })
-      .on('click', function() {
+      .on('click', function(d) {
         let selectedCountry = d3.select(this).property('id').slice(8);
-        initLineGraph(flatData, yearsSet, selectedPpp, selectedYear, selectedCountry, selectedShortCommodities);
+        if (mapData.get(d.properties.name)) {
+          initLineGraph(flatData, yearsSet, selectedPpp, selectedYear, selectedCountry, selectedShortCommodity);
+        }
       });
   
     updateSelectedValuesHTML();
   };
   
-  initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+  initialGraph(selectedPpp, selectedYear, selectedShortCommodity);
+  initLineGraph(flatData, yearsSet, selectedPpp, selectedYear, 'Nigeria', selectedShortCommodity);
   
   // Register event listeners on the radio buttons, dropdown menu, and checkboxes to redraw the graph when the selection has changes
   exchangeMenu.on('change', function () {
     let sExchange = d3.select("input[name='cm-exchangeGroup']:checked");
     selectedPpp = (sExchange.attr('id') === 'cm-pppRadio');
 
-    //svgMap.selectAll('*').remove();
-    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodity);
   });
 
   yearMenu.on('change', function () {
     // Find which year was selected from the dropdown
     selectedYear = d3.select(this)
-      .select("select")
-      .property("value");
+      .select('select')
+      .property('value');
 
     updateSelections();
-    //svgMap.selectAll('*').remove();
-    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodity);
   });
   
   yearSlider.on('input', function () {
     // Find which year was selected from the dropdown
     selectedYear = d3.select(this)
-      .property("value");
+      .property('value');
     
     updateSelections();
-    //svgMap.selectAll('*').remove();
-    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodity);
   });
 
   shortCommoditiesList.on('change', function () {
-    selectedShortCommodities = [];
-
-    let sCommodities = d3.selectAll("input.cm-radioCommodity:checked");
-    sCommodities.each((commodity) => selectedShortCommodities.push(commodity));
-
+    // Find which commodity was selected from the radio buttons
+    selectedShortCommodity = d3.selectAll('input.cm-radioCommodity:checked').property('value');
+    console.log(selectedShortCommodity);
     updateSelections();
-    //svgMap.selectAll('*').remove();
-    initialGraph(selectedPpp, selectedYear, selectedShortCommodities);
+    initialGraph(selectedPpp, selectedYear, selectedShortCommodity);
   });
 };
