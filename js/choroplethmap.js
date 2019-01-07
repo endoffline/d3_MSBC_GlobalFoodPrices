@@ -52,7 +52,7 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
     .attr('class', 'caption')
     .attr('x', 0)
     .attr('y', -6)
-    .text('Total prices of selected commodities in USD');
+    .text('Mean prices of selected commodity in USD');
   let labels = [
     '\u00A0\u00A00.00',
     '\u00A0\u00A00.01 - \u00A0\u00A00.24',

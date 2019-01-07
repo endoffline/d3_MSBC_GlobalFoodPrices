@@ -49,7 +49,8 @@ window.onload = function () {
           province: data.adm1_name,
           city: data.mkt_name,
           commodity: data.cm_name,
-          // In the CSV the commodities are stored with qualities in their names, therefore making it difficult to process meaningfully
+          // In the CSV the commodities are stored with qualities in their names,
+          // therefore making it difficult to process meaningfully.
           // 'Rice (low quality) - Retail' and 'Rice (high quality) - Retail' become both just 'Rice'
           shortCommodity: data.cm_name.split(/[.:;?!\-~,`"&|()<>{}\[\]\r\n/\\]+/)[0].trim(),
           currency: data.cur_name,
@@ -88,13 +89,15 @@ window.onload = function () {
         d.indicatorCode = d['Indicator Code'];
       });
 
-      // Nest the data by year, country and commodity to calculate the mean prices, thus ignoring monthly an regional prices
+      // Nest the data by year, country and commodity to calculate the mean prices,
+      // thus ignoring monthly an regional prices
       let nestedData = d3.nest()
         .key((d) => d.year + '.' + d.country + '.' + d.shortCommodity)
         .sortKeys(d3.descending)
         .rollup(function (v) {
 
-          // To calculate a fair mean value it is necessary to convert units like tons, pounds or 3.5 kg to just 1 kg
+          // To calculate a fair mean value it is necessary to convert units like tons,
+          // pounds or 3.5 kg to just 1 kg
           let mean = d3.mean(v, (d) => {
             let u = d.unit.split(' ');
             let unit = d.unit;
