@@ -89,14 +89,12 @@ window.onload = function () {
           // To calculate a fair mean value it is necessary to convert units like tons, pounds or 3.5 kg to just 1 kg
           let mean = d3.mean(v, (d) => {
             let u = d.unit.split(' ');
-            let unit;
+            let unit = d.unit;
             let price = d.price;
-            if (u.length === 2 && Number.isInteger(+u[0])) {
+            if (u.length > 1 && !isNaN(+u[0])) {
               let factor = +u[0];
               unit = u[1];
               price = price / factor;
-            } else {
-              unit = u[0];
             }
 
             if (['mt'].indexOf(unit.toLowerCase()) > -1) {
@@ -112,7 +110,7 @@ window.onload = function () {
 
           let unitParts = v[0].unit.split(' ');
           let unit = '';
-          if (unitParts.length > 1 && Number.isInteger(+unitParts[0])) {
+          if (unitParts.length > 1 && !isNaN(+unitParts[0])) {
             for (let i = 1; i < unitParts.length; i++) {
               unit += unitParts[i];
               if (i === unitParts.length - 1)
