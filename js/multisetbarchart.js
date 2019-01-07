@@ -14,8 +14,7 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
     .append('div')
     .attr('class', 'tooltip')
     .style('opacity', 0);
-
-
+  
   let x0 = d3.scaleBand() // X-axis for country names
     .rangeRound([0, width])
     .paddingInner(0.1);
@@ -65,13 +64,13 @@ let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommodit
     .data(countriesSet)
     .enter()
     .append('label')
-    .attr('for', (country) => country)
+    .attr('for', (country) => 'msbc-' + country)
     .attr('class', 'col s3')
     .append('input')
     .attr('type', 'checkbox')
     .attr('class', 'msbc-checkboxCountry')
-    .attr('name', (country) => country)
-    .attr('id', (country) => country)
+    .attr('name', (country) => 'msbc-' + country)
+    .attr('id', (country) => 'msbc-' + country)
     .attr('value', (country) => country);
   countriesList
     .selectAll('label')

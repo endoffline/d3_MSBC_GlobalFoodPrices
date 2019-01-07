@@ -218,6 +218,10 @@ let choroplethMap = function (flatData, topo, yearsSet, countriesSet, shortCommo
           .attr('stroke', '#455a64')
           .attr('stroke-width', '1');
         
+      })
+      .on('click', function() {
+        let selectedCountry = d3.select(this).property('id').slice(8);
+        initLineGraph(flatData, yearsSet, selectedPpp, selectedYear, selectedCountry, selectedShortCommodities);
       });
   
     updateSelectedValuesHTML();
