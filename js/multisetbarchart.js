@@ -1,3 +1,6 @@
+/*
+ * Tutorial: https://bl.ocks.org/mbostock/3887051
+ */
 let multiSetBarChart = function (flatData, yearsSet, countriesSet, shortCommoditiesSet) {
 
   let margin = {top: 20, right: 160, bottom: 30, left: 30},

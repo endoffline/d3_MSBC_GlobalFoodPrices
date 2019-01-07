@@ -1,4 +1,6 @@
 /*
+ * Tutorial: http://bl.ocks.org/palewire/d2906de347a160f38bc0b7ca57721328
+ *
  * IMPORTANT TIP: use the prefix 'cm-' for HTML ids and classes for this graph, such as '.cm-chart'
  * 1. add choropleth map code into initialGraph function using selected Data
  * 2. test until the graph is displayed

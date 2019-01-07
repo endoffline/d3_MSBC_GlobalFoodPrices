@@ -1,19 +1,27 @@
 /*
+ * This project visualizes the global food prices database in:
+ * - a multi-set bar chart for direct price comparisons of few countries and commodites,
+ * - a choropleth map which displays prices for one commodity globally and
+ * - a line graph for visualising price development.
+ *
+ * It was created by Chiwoong Hwang and Stefan Höller for the course Information Visualisation.
+ *
  * reading data: http://learnjsdata.com/read_data.html
- * nesting data: http://learnjsdata.com/group_data.html
- * Grouped bar chart tutorial: https://bl.ocks.org/mbostock/3887051
- * http://bl.ocks.org/kpq/6695897
+ * Nesting tutorials:
+ * http://learnjsdata.com/group_data.html
  * http://bl.ocks.org/hubgit/raw/9133448/
  * https://bl.ocks.org/ProQuestionAsker/8382f70af7f4a7355827c6dc4ee8817d
  * https://amber.rbind.io/blog/2017/05/02/d3nest/
  *
- * exchange rates: https://data.worldbank.org/indicator/PA.NUS.FCRF?end=2017&start=1992
+ * Data sources:
+ * Global Food Prices Database: https://data.humdata.org/dataset/4fdcd4dc-5c2f-43af-a1e4-93c9b6539a27
+ * Exchange Rates: https://data.worldbank.org/indicator/PA.NUS.FCRF?end=2017&start=1992
+ * Purchasing power parity: https://data.worldbank.org/indicator/PA.NUS.PPP
+ * Geo data for choropleth map: https://enjalot.github.io/wwsd/data/world/world-110m.geojson
  *
- * ppp: https://economics.stackexchange.com/a/17379
- * https://data.worldbank.org/indicator/PA.NUS.PPP
- * https://data.oecd.org/conversion/purchasing-power-parities-ppp.htm#indicator-chart
- *
- * Geo data: https://enjalot.github.io/wwsd/data/world/world-110m.geojson
+ * Frameworks:
+ * D3v4: https://d3js.org/
+ * Materialize: https://materializecss.com/
  */
 
 function initMaterializeCSS() {
