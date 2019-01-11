@@ -1,0 +1,21 @@
+Feedback
+--------
+
+Multi-set Bar Chart
+The numbers in the checkbox lists are not explained.
+
+Choropleth Map
+It's not clear that a click on the country updates the choropleth map.
+Highlight countries when hovering over the legend.
+Year slider is not explained, labels are missing.
+Dropdown and slider don't update each other.
+Zooming is missing.
+
+Line Graph
+The two lines could collide and therefore obstruct each other.
+
+Misc
+Improve tooltip behavior.
+Add explanations.
+Add loading animation.
+Check for color blindfriendly colors.
