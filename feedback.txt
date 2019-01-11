@@ -19,3 +19,4 @@ Improve tooltip behavior.
 Add explanations.
 Add loading animation.
 Check for color blindfriendly colors.
+ANIMATE EVERYTHING!!!
